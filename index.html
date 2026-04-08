@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #1a1a2e;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #2a2a3e;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 { font-size: 20px; font-weight: 600; color: #fff; }
+  .date-display { font-size: 14px; color: #8888aa; }
+
+  nav {
+    display: flex;
+    background: #1a1a2e;
+    border-bottom: 1px solid #2a2a3e;
+    position: sticky;
+    top: 53px;
+    z-index: 99;
+  }
+
+  nav button {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    color: #8888aa;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  nav button.active { color: #7c83ff; border-bottom-color: #7c83ff; }
+  nav button:hover { color: #aaaacc; }
+
+  .container { max-width: 700px; margin: 0 auto; padding: 16px; }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #7c83ff;
+    margin: 20px 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .section-subtitle {
+    font-size: 12px;
+    color: #666;
+    margin: -8px 0 12px;
+  }
+
+  .exercise-card {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.2s;
+    border: 1px solid #2a2a3e;
+  }
+
+  .exercise-card.checked { opacity: 0.5; }
+  .exercise-card.checked .exercise-name { text-decoration: line-through; }
+
+  .color-indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .exercise-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #444;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: transparent;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  .exercise-check:hover { border-color: #7c83ff; }
+  .exercise-check.done { background: #7c83ff; border-color: #7c83ff; color: #fff; }
+
+  .exercise-info { flex: 1; min-width: 0; }
+
+  .exercise-name { font-size: 15px; font-weight: 500; color: #e0e0e0; }
+
+  .exercise-prescription {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+
+  .exercise-benchmark {
+    font-size: 11px;
+    color: #666;
+    margin-top: 1px;
+    font-style: italic;
+  }
+
+  .exercise-notes {
+    font-size: 11px;
+    color: #7c83ff;
+    margin-top: 2px;
+    opacity: 0.7;
+  }
+
+  .exercise-current {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .exercise-current-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+  }
+
+  .exercise-current-label {
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+
+  .btn-icon:hover { color: #aaa; background: #2a2a3e; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .log-day { margin-bottom: 20px; }
+
+  .log-date {
+    font-size: 14px;
+    font-weight: 600;
+    color: #7c83ff;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2a2a3e;
+  }
+
+  .log-entry {
+    font-size: 13px;
+    color: #aaa;
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .log-entry .color-indicator { width: 10px; height: 10px; margin-top: 0; }
+  .log-check { color: #4caf50; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 480px;
+    border: 1px solid #2a2a3e;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal h2 { font-size: 18px; margin-bottom: 16px; color: #fff; }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus { border-color: #7c83ff; }
+
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .form-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #7c83ff;
+  }
+
+  .form-check label {
+    font-size: 13px;
+    color: #aaa;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary { background: #7c83ff; color: #fff; }
+  .btn-primary:hover { background: #6b72ee; }
+  .btn-secondary { background: #2a2a3e; color: #aaa; }
+  .btn-secondary:hover { background: #333350; }
+  .btn-danger { background: #442222; color: #ff6666; }
+  .btn-danger:hover { background: #553333; }
+
+  .add-btn {
+    width: 100%;
+    padding: 12px;
+    background: #1a1a2e;
+    border: 2px dashed #2a2a3e;
+    border-radius: 10px;
+    color: #555;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+
+  .add-btn:hover { border-color: #7c83ff; color: #7c83ff; }
+
+  .empty-state {
+    text-align: center;
+    color: #555;
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+
+  .streak-bar {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .streak-day {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a3e;
+  }
+
+  .streak-day.completed { background: #4caf50; border-color: #4caf50; }
+  .streak-day.partial { background: #ff9800; border-color: #ff9800; }
+  .streak-day.today { border-color: #7c83ff; border-width: 2px; }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    flex: 1;
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #2a2a3e;
+  }
+
+  .stat-value { font-size: 28px; font-weight: 700; color: #7c83ff; }
+  .stat-label { font-size: 11px; color: #666; text-transform: uppercase; margin-top: 4px; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .date-nav button {
+    background: #1a1a2e;
+    border: 1px solid #2a2a3e;
+    color: #aaa;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .date-nav button:hover { background: #2a2a3e; }
+
+  .date-nav span {
+    font-size: 15px;
+    font-weight: 500;
+    min-width: 160px;
+    text-align: center;
+  }
+
+  .gym-day-indicator {
+    display: inline-block;
+    background: #2a2a3e;
+    color: #7c83ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+
+  .rest-message {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    border: 1px solid #2a2a3e;
+    margin-bottom: 8px;
+  }
+
+  .rest-message span { font-size: 24px; display: block; margin-bottom: 8px; }
+
+  .subsection-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    margin: 16px 0 8px;
+    padding-left: 4px;
+  }
+
+  .exercise-details {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  /* Inline gym card */
+  .gym-inline-card {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    border: 1px solid #2a2a3e;
+    transition: all 0.2s;
+  }
+
+  .gym-inline-card.checked {
+    opacity: 0.5;
+  }
+
+  .gym-inline-card.checked .exercise-name {
+    text-decoration: line-through;
+  }
+
+  .gym-inline-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .gym-inline-inputs {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .gym-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .gym-input-group label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .gym-input-group input {
+    width: 56px;
+    padding: 6px 8px;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+  }
+
+  .gym-input-group input:focus {
+    border-color: #7c83ff;
+  }
+
+  .gym-input-group.weight-group input {
+    width: 64px;
+  }
+
+  .gym-input-divider {
+    color: #444;
+    font-size: 14px;
+    padding-bottom: 6px;
+  }
+
+  .gym-log-btn {
+    padding: 6px 14px;
+    background: #7c83ff;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .gym-log-btn:hover { background: #6b72ee; }
+
+  .gym-log-btn.logged {
+    background: #2a3a2a;
+    color: #4caf50;
+  }
+
+  .gym-logged-summary {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 6px;
+  }
+
+  .gym-logged-summary strong {
+    color: #ccc;
+    font-weight: 600;
+  }
+
+  .gym-undo-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 8px;
+    text-decoration: underline;
+  }
+
+  .gym-undo-btn:hover { color: #aaa; }
+
+  /* Protein tracker */
+  .protein-card {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a2a3e;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .protein-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: #2a2a3e;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .protein-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s, background 0.3s;
+  }
+
+  .protein-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .protein-input-wrap input {
+    width: 56px;
+    padding: 6px 8px;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+  }
+
+  .protein-input-wrap input:focus { border-color: #7c83ff; }
+
+  .protein-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #ccc;
+  }
+
+  .protein-goal {
+    font-size: 11px;
+    color: #666;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Exercise Tracker</h1>
+  <div class="date-display" id="headerDate"></div>
+</header>
+
+<nav>
+  <button class="active" onclick="showView('today')">Today</button>
+  <button onclick="showView('exercises')">Exercises</button>
+  <button onclick="showView('log')">Log</button>
+</nav>
+
+<div class="container">
+  <!-- TODAY VIEW -->
+  <div class="view active" id="view-today">
+    <div class="date-nav">
+      <button onclick="changeDay(-1)">&larr;</button>
+      <span id="currentDayLabel"></span>
+      <button onclick="changeDay(1)">&rarr;</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="statDone">0</div>
+        <div class="stat-label">Done Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statStreak">0</div>
+        <div class="stat-label">Day Streak</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="color-indicator" style="background:#4caf50"></div> At benchmark</div>
+      <div class="legend-item"><div class="color-indicator" style="background:#cddc39"></div> Close</div>
+      <div class="legend-item"><div class="color-indicator" style="background:#ff9800"></div> Getting there</div>
+      <div class="legend-item"><div class="color-indicator" style="background:#f44336"></div> Far off</div>
+    </div>
+
+    <div id="proteinTracker"></div>
+
+    <div id="todayList"></div>
+  </div>
+
+  <!-- EXERCISES VIEW -->
+  <div class="view" id="view-exercises">
+    <div class="section-title">Daily Exercises</div>
+    <div class="section-subtitle">Every day</div>
+    <div id="dailyExercisesList"></div>
+    <button class="add-btn" onclick="openAddModal('daily')">+ Add Daily Exercise</button>
+
+    <div class="section-title">Gym Exercises</div>
+    <div class="section-subtitle">3 &ndash; 4 times per week</div>
+    <div id="gymExercisesList"></div>
+    <button class="add-btn" onclick="openAddModal('gym')">+ Add Gym Exercise</button>
+  </div>
+
+  <!-- LOG VIEW -->
+  <div class="view" id="view-log">
+    <div class="section-title">Last 14 Days</div>
+    <div class="streak-bar" id="streakBar"></div>
+    <div id="logList"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="exerciseModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Exercise</h2>
+    <div class="form-group">
+      <label>Exercise Name</label>
+      <input type="text" id="exName" placeholder="e.g. Dead Bug">
+    </div>
+    <div class="form-group">
+      <label>Type</label>
+      <select id="exType" onchange="toggleTypeFields()">
+        <option value="reps">Reps Only</option>
+        <option value="timed">Reps &times; Hold Time</option>
+        <option value="weighted">Weight + Reps</option>
+        <option value="banded">Resistance Band + Reps</option>
+        <option value="done">Just Do It</option>
+      </select>
+    </div>
+    <div class="form-group" id="setsGroup">
+      <label>Sets</label>
+      <input type="number" id="exSets" placeholder="3">
+    </div>
+    <div class="form-check" id="eachSideGroup">
+      <input type="checkbox" id="exEachSide">
+      <label for="exEachSide">Each side</label>
+    </div>
+
+    <!-- Reps fields -->
+    <div id="repsFields">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Reps</label>
+          <input type="number" id="exReps" placeholder="10">
+        </div>
+        <div class="form-group">
+          <label>Benchmark Reps</label>
+          <input type="number" id="exBenchReps" placeholder="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Timed fields -->
+    <div id="timedFields" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Reps</label>
+          <input type="number" id="exTimedReps" placeholder="8">
+        </div>
+        <div class="form-group">
+          <label>Benchmark Reps</label>
+          <input type="number" id="exTimedBenchReps" placeholder="8">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Hold (sec)</label>
+          <input type="number" id="exHoldSec" placeholder="10">
+        </div>
+        <div class="form-group">
+          <label>Benchmark Hold (sec)</label>
+          <input type="number" id="exBenchHoldSec" placeholder="30">
+        </div>
+      </div>
+    </div>
+
+    <!-- Weighted fields -->
+    <div id="weightedFields" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Weight (lbs)</label>
+          <input type="number" id="exWeight" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Your Reps</label>
+          <input type="number" id="exWeightedReps" placeholder="10">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Benchmark Weight (lbs)</label>
+          <input type="number" id="exBenchWeight" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Benchmark Reps</label>
+          <input type="number" id="exWeightedBenchReps" placeholder="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Banded fields -->
+    <div id="bandedFields" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Band Level</label>
+          <select id="exBandLevel">
+            <option value="1">X-Light</option>
+            <option value="2">Light</option>
+            <option value="3">Medium</option>
+            <option value="4">Heavy</option>
+            <option value="5">X-Heavy</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Benchmark Band</label>
+          <select id="exBenchBandLevel">
+            <option value="1">X-Light</option>
+            <option value="2">Light</option>
+            <option value="3">Medium</option>
+            <option value="4">Heavy</option>
+            <option value="5">X-Heavy</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Reps</label>
+          <input type="number" id="exBandedReps" placeholder="10">
+        </div>
+        <div class="form-group">
+          <label>Benchmark Reps</label>
+          <input type="number" id="exBandedBenchReps" placeholder="15">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <input type="text" id="exNotes" placeholder="e.g. each side, focus on form">
+    </div>
+
+    <input type="hidden" id="exCategory">
+    <input type="hidden" id="exEditId">
+    <div class="modal-buttons">
+      <button class="btn btn-danger" id="deleteBtn" style="display:none;margin-right:auto" onclick="deleteExercise()">Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExercise()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal-overlay" id="logModal">
+  <div class="modal">
+    <h2 id="logModalTitle">Update Today's Numbers</h2>
+    <div id="logModalFields"></div>
+    <input type="hidden" id="logExId">
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeLogModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLogEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'exerciseTracker_v8';
+const BAND_NAMES = { 1: 'X-Light', 2: 'Light', 3: 'Medium', 4: 'Heavy', 5: 'X-Heavy' };
+
+let state = loadState();
+let currentViewDate = todayStr();
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) return JSON.parse(raw);
+  return {
+    exercises: getDefaultExercises(),
+    log: {},
+    gymDays: [1, 3, 5]
+  };
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function genId() { return 'ex-' + Math.random().toString(36).slice(2, 9); }
+
+function getDefaultExercises() {
+  return [
+    // ── Daily PT / Rehab ──
+    // Mobility
+    { id: genId(), name: 'Sidelying Thoracic Rotation (Open Book)', category: 'daily', group: 'Mobility',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Standing Thoracic Open Book at Wall', category: 'daily', group: 'Mobility',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Standing ITB Stretch', category: 'daily', group: 'Mobility',
+      type: 'timed', sets: 1, reps: 3, benchReps: 3, holdSec: 20, benchHoldSec: 30, eachSide: true,
+      weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    // Activation & Stability
+    { id: genId(), name: 'Seated Pelvic Tilt', category: 'daily', group: 'Activation & Stability',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Seated Scapular Retraction', category: 'daily', group: 'Activation & Stability',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Static Prone on Elbows', category: 'daily', group: 'Activation & Stability',
+      type: 'timed', sets: 1, reps: 8, benchReps: 8, holdSec: 10, benchHoldSec: 30, eachSide: false,
+      weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    // Strengthening
+    { id: genId(), name: 'Straight Leg Raise', category: 'daily', group: 'Strengthening',
+      type: 'reps', sets: 3, reps: 10, benchReps: 20, eachSide: true, perSet: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'AMRAP each set' },
+
+    { id: genId(), name: 'Supine 90-90 Alternating Heel Touches (PPT)', category: 'daily', group: 'Strengthening',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Maintain posterior pelvic tilt throughout' },
+
+    { id: genId(), name: 'Side Lying Hip Abduction (Band)', category: 'daily', group: 'Strengthening',
+      type: 'banded', sets: 3, reps: 10, benchReps: 15, bandLevel: 2, benchBandLevel: 3, eachSide: true, perSet: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0,
+      notes: 'Slowly escalate band over time' },
+
+    // ── Transverse Abdominis Progression ──
+    { id: genId(), name: 'Dead Bug', category: 'daily', group: 'Transverse Abdominis',
+      type: 'reps', sets: 3, reps: 12, benchReps: 12, eachSide: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Opposite arm + leg; keep low back pressed to floor' },
+
+    { id: genId(), name: 'Bird Dog', category: 'daily', group: 'Transverse Abdominis',
+      type: 'reps', sets: 3, reps: 12, benchReps: 12, eachSide: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Opposite arm + leg; keep hips level' },
+
+    { id: genId(), name: 'Pallof Press', category: 'daily', group: 'Transverse Abdominis',
+      type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Cable or band; resist rotation' },
+
+    { id: genId(), name: 'Hollow Body Hold', category: 'daily', group: 'Transverse Abdominis',
+      type: 'timed', sets: 3, reps: 1, benchReps: 1, holdSec: 10, benchHoldSec: 30, eachSide: false,
+      weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Modify by bending knees if needed' },
+
+    // ── Deep Cervical Flexor Progression ──
+    { id: genId(), name: 'Supine Chin Tuck & Hold', category: 'daily', group: 'Deep Cervical Flexors',
+      type: 'timed', sets: 3, reps: 5, benchReps: 10, holdSec: 5, benchHoldSec: 10, eachSide: false,
+      weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Tuck chin, lift head just off floor' },
+
+    { id: genId(), name: 'Supine Chin Tuck Head Lift', category: 'daily', group: 'Deep Cervical Flexors',
+      type: 'timed', sets: 3, reps: 3, benchReps: 10, holdSec: 3, benchHoldSec: 10, eachSide: false,
+      weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Lift head higher while maintaining chin tuck; progression from above' },
+
+    { id: genId(), name: 'Prone Chin Tuck', category: 'daily', group: 'Deep Cervical Flexors',
+      type: 'reps', sets: 3, reps: 5, benchReps: 10, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Face down; tuck chin toward throat' },
+
+    // ── Strengthening (cont.) ──
+    { id: genId(), name: 'Standing Knee Raises', category: 'daily', group: 'Strengthening',
+      type: 'reps', sets: 3, reps: 10, benchReps: 15, eachSide: true, perSet: true,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    // ── Daily Practice ──
+    { id: genId(), name: 'Progressive Core Work (Sit-Up Engagement)', category: 'daily', group: 'Daily Practice',
+      type: 'done', sets: 0, reps: 0, benchReps: 0, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Practice engaging core while sitting up; currently reliable only lying down' },
+
+    { id: genId(), name: 'Dowel Deadlift Practice', category: 'daily', group: 'Daily Practice',
+      type: 'done', sets: 0, reps: 0, benchReps: 0, eachSide: false,
+      weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Practice deadlift form with dowel' },
+
+    // ── Gym (3-4x/week) ── Upper Body
+    { id: genId(), name: 'Standing Trap Shrug', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 10, benchReps: 12, weight: 10, benchWeight: 20, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Dumbbells' },
+
+    { id: genId(), name: 'Single Arm Bent Over Row', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 8, benchWeight: 15, eachSide: true,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Bent Over Reverse Fly', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 3, benchWeight: 8, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Dumbbells' },
+
+    { id: genId(), name: 'Dumbbell Bench Press', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 10, benchWeight: 15, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Weight per dumbbell' },
+
+    { id: genId(), name: 'Seated Row', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 25, benchWeight: 40, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Prone I Raises', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Light weights; arms straight overhead' },
+
+    { id: genId(), name: 'Prone Y Raises', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Light weights; arms in Y position' },
+
+    { id: genId(), name: 'Prone T Raises', category: 'gym', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Light weights; arms straight out to sides' },
+
+    // Lower Body
+    { id: genId(), name: 'Goblet Squat', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 25, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Kettlebell Deadlift', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 20, benchWeight: 35, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Leg Press', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 50, benchWeight: 90, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Knee Extension', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 30, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Hamstring Curl', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 25, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Hip Extension Machine', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 20, benchWeight: 40, eachSide: false,
+      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: '' },
+
+    { id: genId(), name: 'Calf Raise', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 10, benchReps: 15, eachSide: true,
+      weight: 0, benchWeight: 20, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Single leg; start bodyweight, add dumbbell to progress' },
+
+    { id: genId(), name: 'Single Leg Glute Bridge', category: 'gym', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 15, eachSide: true,
+      weight: 0, benchWeight: 25, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
+      notes: 'Weight on hips; start bodyweight' },
+  ];
+}
+
+// ─── Color calc ─────────────────────────────────────────────────────────
+function getProgressRatio(ex) {
+  if (ex.type === 'done') return 1;
+  if (ex.type === 'reps') {
+    if (ex.benchReps <= 0) return 1;
+    return Math.min(ex.reps / ex.benchReps, 1);
+  }
+  if (ex.type === 'timed') {
+    let rr = ex.benchReps > 0 ? Math.min(ex.reps / ex.benchReps, 1) : 1;
+    let hr = ex.benchHoldSec > 0 ? Math.min(ex.holdSec / ex.benchHoldSec, 1) : 1;
+    return (rr + hr) / 2;
+  }
+  if (ex.type === 'weighted') {
+    let wr = ex.benchWeight > 0 ? Math.min(ex.weight / ex.benchWeight, 1) : 1;
+    let rr = ex.benchReps > 0 ? Math.min(ex.reps / ex.benchReps, 1) : 1;
+    return (wr + rr) / 2;
+  }
+  if (ex.type === 'banded') {
+    let br = ex.benchBandLevel > 0 ? Math.min(ex.bandLevel / ex.benchBandLevel, 1) : 1;
+    let rr = ex.benchReps > 0 ? Math.min(ex.reps / ex.benchReps, 1) : 1;
+    return (br + rr) / 2;
+  }
+  return 1;
+}
+
+function ratioToColor(ratio) {
+  if (ratio >= 0.95) return '#4caf50';
+  if (ratio >= 0.75) return '#8bc34a';
+  if (ratio >= 0.55) return '#cddc39';
+  if (ratio >= 0.35) return '#ff9800';
+  return '#f44336';
+}
+
+// ─── Formatting helpers ─────────────────────────────────────────────────
+function fmtPrescription(ex) {
+  const side = ex.eachSide ? ', each side' : '';
+  if (ex.type === 'reps') {
+    return `${ex.sets} &times; ${ex.reps} reps${side}`;
+  }
+  if (ex.type === 'timed') {
+    if (ex.reps === 1) return `${ex.sets} &times; ${ex.holdSec}s hold${side}`;
+    return `${ex.reps} reps &times; ${ex.holdSec}s hold${side}`;
+  }
+  if (ex.type === 'weighted') {
+    return `${ex.sets} &times; ${ex.reps} @ ${ex.weight} lbs${side}`;
+  }
+  if (ex.type === 'banded') {
+    return `${ex.sets} &times; ${ex.reps} reps (${BAND_NAMES[ex.bandLevel] || 'X-Light'} band)${side}`;
+  }
+  return 'Complete';
+}
+
+function fmtBenchmark(ex) {
+  const side = ex.eachSide ? ', each side' : '';
+  if (ex.type === 'reps') {
+    return `Normal: ${ex.benchReps} reps${side}`;
+  }
+  if (ex.type === 'timed') {
+    if (ex.benchReps === 1) return `Normal: ${ex.benchHoldSec}s hold${side}`;
+    return `Normal: ${ex.benchReps} reps &times; ${ex.benchHoldSec}s${side}`;
+  }
+  if (ex.type === 'weighted') {
+    return `Normal: ${ex.benchReps} @ ${ex.benchWeight} lbs${side}`;
+  }
+  if (ex.type === 'banded') {
+    return `Normal: ${ex.benchReps} reps (${BAND_NAMES[ex.benchBandLevel] || 'Medium'} band)${side}`;
+  }
+  return 'Just do it';
+}
+
+function fmtCurrent(ex, entry) {
+  if (ex.type === 'done') return entry?.done ? 'Done!' : '—';
+  // Per-set display
+  if (ex.perSet && entry?.repsPerSet) {
+    const setStr = entry.repsPerSet.join(' / ');
+    if (ex.type === 'banded') {
+      const bl = entry?.bandLevel ?? ex.bandLevel;
+      return `${BAND_NAMES[bl] || '?'}<br>${setStr}`;
+    }
+    return setStr;
+  }
+  if (ex.type === 'reps') {
+    return `${entry?.reps ?? ex.reps} reps`;
+  }
+  if (ex.type === 'timed') {
+    const r = entry?.reps ?? ex.reps;
+    const h = entry?.holdSec ?? ex.holdSec;
+    if (r === 1) return `${h}s hold`;
+    return `${r} &times; ${h}s`;
+  }
+  if (ex.type === 'weighted') {
+    return `${entry?.weight ?? ex.weight} lbs &times; ${entry?.reps ?? ex.reps}`;
+  }
+  if (ex.type === 'banded') {
+    const bl = entry?.bandLevel ?? ex.bandLevel;
+    return `${BAND_NAMES[bl] || 'X-Light'} &times; ${entry?.reps ?? ex.reps}`;
+  }
+  return '—';
+}
+
+// ─── Views ──────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('nav button').forEach((b, i) => {
+    b.classList.toggle('active', ['today','exercises','log'][i] === name);
+  });
+  if (name === 'today') renderToday();
+  if (name === 'exercises') renderExercises();
+  if (name === 'log') renderLog();
+}
+
+// ─── Today View ─────────────────────────────────────────────────────────
+function changeDay(offset) {
+  const d = new Date(currentViewDate + 'T12:00:00');
+  d.setDate(d.getDate() + offset);
+  currentViewDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  renderToday();
+}
+
+function isGymDay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return state.gymDays.includes(d.getDay());
+}
+
+function getExercisesForDate(dateStr) {
+  const daily = state.exercises.filter(e => e.category === 'daily');
+  if (isGymDay(dateStr)) {
+    return [...daily, ...state.exercises.filter(e => e.category === 'gym')];
+  }
+  return daily;
+}
+
+function renderToday() {
+  const dateObj = new Date(currentViewDate + 'T12:00:00');
+  const opts = { weekday: 'long', month: 'long', day: 'numeric' };
+  const label = dateObj.toLocaleDateString('en-US', opts);
+  const isToday = currentViewDate === todayStr();
+  document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '');
+
+  const exercises = getExercisesForDate(currentViewDate);
+  const dayLog = state.log[currentViewDate] || {};
+  const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
+
+  document.getElementById('statDone').textContent = doneCount;
+  document.getElementById('statTotal').textContent = exercises.length;
+  document.getElementById('statStreak').textContent = calcStreak();
+
+  let html = '';
+  const daily = exercises.filter(e => e.category === 'daily');
+  const gym = exercises.filter(e => e.category === 'gym');
+
+  if (daily.length) {
+    // Group by group name
+    const groups = {};
+    daily.forEach(e => {
+      const g = e.group || 'General';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(e);
+    });
+    html += '<div class="section-title">Daily Exercises</div>';
+    for (const [groupName, exs] of Object.entries(groups)) {
+      html += `<div class="subsection-title">${groupName}</div>`;
+      exs.forEach(e => { html += renderTodayCard(e, dayLog); });
+    }
+  }
+
+  if (gym.length) {
+    html += '<div class="section-title">Gym <span class="gym-day-indicator">Gym Day</span></div>';
+    const groups = {};
+    gym.forEach(e => {
+      const g = e.group || 'General';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(e);
+    });
+    for (const [groupName, exs] of Object.entries(groups)) {
+      html += `<div class="subsection-title">${groupName}</div>`;
+      exs.forEach(e => { html += renderTodayCard(e, dayLog); });
+    }
+  } else if (!isGymDay(currentViewDate)) {
+    const hasGym = state.exercises.some(e => e.category === 'gym');
+    if (hasGym) {
+      html += '<div class="section-title">Gym</div>';
+      html += '<div class="rest-message"><span>&#128164;</span>Rest day — no gym exercises today</div>';
+    }
+  }
+
+  document.getElementById('todayList').innerHTML = html;
+  renderProtein();
+}
+
+function renderTodayCard(ex, dayLog) {
+  const entry = dayLog[ex.id];
+  const done = entry?.done;
+  const ratio = getProgressRatio(ex);
+  const color = ratioToColor(ratio);
+
+  // Gym weighted exercises get inline inputs
+  if (ex.category === 'gym' && ex.type === 'weighted') {
+    return renderGymWeightedCard(ex, entry, ratio, color);
+  }
+
+  const checkedClass = done ? 'checked' : '';
+  const doneClass = done ? 'done' : '';
+  const canEdit = ex.type !== 'done';
+
+  const currentStr = fmtCurrent(ex, entry);
+  const benchStr = fmtBenchmark(ex);
+  const prescStr = fmtPrescription(ex);
+  const notesStr = ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : '';
+
+  const editAttrs = canEdit ? `style="cursor:pointer" onclick="openLogEntryModal('${ex.id}')"` : '';
+
+  return `
+    <div class="exercise-card ${checkedClass}">
+      <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
+      <button class="exercise-check ${doneClass}" onclick="toggleDone('${ex.id}')">&#10003;</button>
+      <div class="exercise-info">
+        <div class="exercise-name">${ex.name}</div>
+        <div class="exercise-prescription">${prescStr}</div>
+        <div class="exercise-benchmark">${benchStr}</div>
+        ${notesStr}
+      </div>
+      <div class="exercise-current" ${editAttrs}>
+        <div class="exercise-current-value">${currentStr}</div>
+        ${canEdit ? '<div class="exercise-current-label">tap to edit</div>' : ''}
+      </div>
+    </div>`;
+}
+
+function renderGymWeightedCard(ex, entry, ratio, color) {
+  const done = entry?.done;
+  const checkedClass = done ? 'checked' : '';
+  const benchStr = fmtBenchmark(ex);
+  const notesStr = ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : '';
+  const side = ex.eachSide ? ', each side' : '';
+  const sets = ex.sets || 3;
+
+  const lastWeight = entry?.weight ?? ex.weight;
+  const existingReps = entry?.repsPerSet || [];
+
+  if (done) {
+    const repsStr = existingReps.length ? existingReps.join(' / ') : `${entry?.reps ?? ex.reps} reps`;
+    return `
+      <div class="gym-inline-card checked">
+        <div class="gym-inline-header">
+          <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
+          <div class="exercise-info">
+            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-benchmark">${benchStr}</div>
+            ${notesStr}
+          </div>
+        </div>
+        <div class="gym-logged-summary">
+          <strong>${entry.weight} lbs</strong> &mdash; ${repsStr} reps${side}
+          <button class="gym-undo-btn" onclick="undoGymLog('${ex.id}')">undo</button>
+        </div>
+      </div>`;
+  }
+
+  let setInputs = '';
+  for (let i = 0; i < sets; i++) {
+    const val = existingReps[i] ?? ex.reps;
+    setInputs += `
+      <div class="gym-input-group">
+        <label>S${i+1}</label>
+        <input type="number" id="gym-reps-${ex.id}-${i}" value="${val}">
+      </div>`;
+  }
+
+  return `
+    <div class="gym-inline-card">
+      <div class="gym-inline-header">
+        <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
+        <div class="exercise-info">
+          <div class="exercise-name">${ex.name}${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''}</div>
+          <div class="exercise-benchmark">${benchStr}</div>
+          ${notesStr}
+        </div>
+      </div>
+      <div class="gym-inline-inputs">
+        <div class="gym-input-group weight-group">
+          <label>Weight</label>
+          <input type="number" id="gym-weight-${ex.id}" value="${lastWeight}">
+        </div>
+        <div class="gym-input-divider">&times;</div>
+        ${setInputs}
+        <button class="gym-log-btn" onclick="logGymExercise('${ex.id}', ${sets})">Log</button>
+      </div>
+    </div>`;
+}
+
+function logGymExercise(exId, sets) {
+  const ex = state.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
+
+  const weight = parseInt(document.getElementById(`gym-weight-${exId}`)?.value) || 0;
+  const repsPerSet = [];
+  for (let i = 0; i < sets; i++) {
+    repsPerSet.push(parseInt(document.getElementById(`gym-reps-${exId}-${i}`)?.value) || 0);
+  }
+  const avgReps = repsPerSet.length ? Math.round(repsPerSet.reduce((a,b) => a+b, 0) / repsPerSet.length) : 0;
+
+  // Update exercise's stored numbers (most recent)
+  ex.weight = weight;
+  ex.reps = avgReps;
+
+  state.log[currentViewDate][exId] = { done: true, weight, reps: avgReps, repsPerSet, holdSec: 0, bandLevel: 0 };
+  save();
+  renderToday();
+}
+
+function undoGymLog(exId) {
+  if (state.log[currentViewDate]?.[exId]) {
+    delete state.log[currentViewDate][exId];
+    save();
+    renderToday();
+  }
+}
+
+function toggleDone(exId) {
+  if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
+  const entry = state.log[currentViewDate][exId];
+  const ex = state.exercises.find(e => e.id === exId);
+  if (entry?.done) {
+    delete state.log[currentViewDate][exId];
+  } else {
+    state.log[currentViewDate][exId] = {
+      done: true,
+      weight: ex.weight,
+      reps: ex.reps,
+      holdSec: ex.holdSec,
+      bandLevel: ex.bandLevel
+    };
+  }
+  save();
+  renderToday();
+}
+
+// ─── Log Entry Modal ────────────────────────────────────────────────────
+function openLogEntryModal(exId) {
+  const ex = state.exercises.find(e => e.id === exId);
+  if (!ex || ex.type === 'done') return;
+  document.getElementById('logExId').value = exId;
+  document.getElementById('logModalTitle').textContent = ex.name;
+
+  const dayLog = state.log[currentViewDate] || {};
+  const entry = dayLog[exId];
+
+  let html = '';
+  if (ex.perSet && (ex.type === 'reps' || ex.type === 'banded')) {
+    const sets = ex.sets || 3;
+    const existing = entry?.repsPerSet || [];
+    if (ex.type === 'banded') {
+      const bl = entry?.bandLevel ?? ex.bandLevel;
+      html += `<div class="form-group"><label>Band Level</label>
+        <select id="logBandLevel">
+          <option value="1" ${bl==1?'selected':''}>X-Light</option>
+          <option value="2" ${bl==2?'selected':''}>Light</option>
+          <option value="3" ${bl==3?'selected':''}>Medium</option>
+          <option value="4" ${bl==4?'selected':''}>Heavy</option>
+          <option value="5" ${bl==5?'selected':''}>X-Heavy</option>
+        </select></div>`;
+    }
+    for (let i = 0; i < sets; i++) {
+      const val = existing[i] ?? ex.reps;
+      html += `<div class="form-group"><label>Set ${i+1} reps</label>
+        <input type="number" class="logSetReps" value="${val}"></div>`;
+    }
+  } else if (ex.type === 'reps') {
+    html = `<div class="form-group"><label>Reps per set</label>
+      <input type="number" id="logReps" value="${entry?.reps ?? ex.reps}"></div>`;
+  } else if (ex.type === 'timed') {
+    html = `<div class="form-row">
+      <div class="form-group"><label>Reps</label>
+        <input type="number" id="logReps" value="${entry?.reps ?? ex.reps}"></div>
+      <div class="form-group"><label>Hold (sec)</label>
+        <input type="number" id="logHoldSec" value="${entry?.holdSec ?? ex.holdSec}"></div>
+    </div>`;
+  } else if (ex.type === 'weighted') {
+    html = `<div class="form-row">
+      <div class="form-group"><label>Weight (lbs)</label>
+        <input type="number" id="logWeight" value="${entry?.weight ?? ex.weight}"></div>
+      <div class="form-group"><label>Reps</label>
+        <input type="number" id="logReps" value="${entry?.reps ?? ex.reps}"></div>
+    </div>`;
+  } else if (ex.type === 'banded') {
+    const bl = entry?.bandLevel ?? ex.bandLevel;
+    html = `<div class="form-row">
+      <div class="form-group"><label>Band Level</label>
+        <select id="logBandLevel">
+          <option value="1" ${bl==1?'selected':''}>X-Light</option>
+          <option value="2" ${bl==2?'selected':''}>Light</option>
+          <option value="3" ${bl==3?'selected':''}>Medium</option>
+          <option value="4" ${bl==4?'selected':''}>Heavy</option>
+          <option value="5" ${bl==5?'selected':''}>X-Heavy</option>
+        </select></div>
+      <div class="form-group"><label>Reps</label>
+        <input type="number" id="logReps" value="${entry?.reps ?? ex.reps}"></div>
+    </div>`;
+  }
+
+  document.getElementById('logModalFields').innerHTML = html;
+  document.getElementById('logModal').classList.add('open');
+}
+
+function closeLogModal() {
+  document.getElementById('logModal').classList.remove('open');
+}
+
+function saveLogEntry() {
+  const exId = document.getElementById('logExId').value;
+  const ex = state.exercises.find(e => e.id === exId);
+  if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
+
+  // Per-set exercises
+  if (ex.perSet && (ex.type === 'reps' || ex.type === 'banded')) {
+    const inputs = document.querySelectorAll('.logSetReps');
+    const repsPerSet = Array.from(inputs).map(inp => parseInt(inp.value) || 0);
+    const avgReps = repsPerSet.length ? Math.round(repsPerSet.reduce((a,b) => a+b, 0) / repsPerSet.length) : 0;
+    const bandLevel = parseInt(document.getElementById('logBandLevel')?.value) || ex.bandLevel || 0;
+
+    ex.reps = avgReps;
+    if (ex.type === 'banded') ex.bandLevel = bandLevel;
+
+    state.log[currentViewDate][exId] = { done: true, reps: avgReps, repsPerSet, holdSec: 0, weight: 0, bandLevel };
+    save();
+    closeLogModal();
+    renderToday();
+    return;
+  }
+
+  const reps = parseInt(document.getElementById('logReps')?.value) || 0;
+  const holdSec = parseInt(document.getElementById('logHoldSec')?.value) || 0;
+  const weight = parseInt(document.getElementById('logWeight')?.value) || 0;
+  const bandLevel = parseInt(document.getElementById('logBandLevel')?.value) || 0;
+
+  // Update exercise's current numbers
+  ex.reps = reps;
+  if (ex.type === 'timed') ex.holdSec = holdSec;
+  if (ex.type === 'weighted') ex.weight = weight;
+  if (ex.type === 'banded') ex.bandLevel = bandLevel;
+
+  state.log[currentViewDate][exId] = { done: true, reps, holdSec, weight, bandLevel };
+  save();
+  closeLogModal();
+  renderToday();
+}
+
+// ─── Protein Tracker ────────────────────────────────────────────────────
+const PROTEIN_GOAL = 63;
+
+function renderProtein() {
+  if (!state.protein) state.protein = {};
+  const val = state.protein[currentViewDate] || 0;
+  const pct = Math.min(Math.round((val / PROTEIN_GOAL) * 100), 100);
+  const barColor = val >= PROTEIN_GOAL ? '#4caf50' : val >= PROTEIN_GOAL * 0.5 ? '#ff9800' : '#f44336';
+
+  document.getElementById('proteinTracker').innerHTML = `
+    <div class="protein-card">
+      <div>
+        <div class="protein-label">Protein</div>
+        <div class="protein-goal">Goal: ${PROTEIN_GOAL}g</div>
+      </div>
+      <div class="protein-bar-wrap">
+        <div class="protein-bar" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+      <div class="protein-input-wrap">
+        <input type="number" id="proteinInput" value="${val || ''}" placeholder="0"
+          onchange="saveProtein()" onkeyup="saveProtein()">
+        <span style="color:#666;font-size:13px">g</span>
+      </div>
+    </div>`;
+}
+
+function saveProtein() {
+  if (!state.protein) state.protein = {};
+  const val = parseInt(document.getElementById('proteinInput')?.value) || 0;
+  state.protein[currentViewDate] = val;
+  save();
+  // Update bar without full re-render
+  const pct = Math.min(Math.round((val / PROTEIN_GOAL) * 100), 100);
+  const barColor = val >= PROTEIN_GOAL ? '#4caf50' : val >= PROTEIN_GOAL * 0.5 ? '#ff9800' : '#f44336';
+  const bar = document.querySelector('.protein-bar');
+  if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
+}
+
+// ─── Streak ─────────────────────────────────────────────────────────────
+function calcStreak() {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const exercises = getExercisesForDate(ds);
+    const dayLog = state.log[ds] || {};
+    const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
+    if (exercises.length > 0 && doneCount === exercises.length) {
+      streak++;
+    } else if (i > 0) {
+      break;
+    } else {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+// ─── Exercises View ─────────────────────────────────────────────────────
+function renderExercises() {
+  renderExerciseList('daily', 'dailyExercisesList');
+  renderExerciseList('gym', 'gymExercisesList');
+}
+
+function renderExerciseList(category, containerId) {
+  const exercises = state.exercises.filter(e => e.category === category);
+  if (!exercises.length) {
+    document.getElementById(containerId).innerHTML = '<div class="empty-state">No exercises yet</div>';
+    return;
+  }
+
+  let html = '';
+  const groups = {};
+  exercises.forEach(e => {
+    const g = e.group || 'General';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(e);
+  });
+
+  for (const [groupName, exs] of Object.entries(groups)) {
+    html += `<div class="subsection-title">${groupName}</div>`;
+    exs.forEach(ex => {
+      const ratio = getProgressRatio(ex);
+      const color = ratioToColor(ratio);
+
+      html += `
+        <div class="exercise-card">
+          <div class="color-indicator" style="background:${color}"></div>
+          <div class="exercise-info">
+            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-details">${fmtPrescription(ex)}</div>
+            <div class="exercise-benchmark">${fmtBenchmark(ex)}</div>
+            ${ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : ''}
+          </div>
+          <button class="btn-icon" onclick="openEditModal('${ex.id}')" title="Edit">&#9998;</button>
+        </div>`;
+    });
+  }
+  document.getElementById(containerId).innerHTML = html;
+}
+
+// ─── Add/Edit Modal ─────────────────────────────────────────────────────
+function openAddModal(category) {
+  document.getElementById('modalTitle').textContent = 'Add Exercise';
+  document.getElementById('exName').value = '';
+  document.getElementById('exType').value = 'reps';
+  document.getElementById('exSets').value = '3';
+  document.getElementById('exEachSide').checked = false;
+  document.getElementById('exReps').value = '';
+  document.getElementById('exBenchReps').value = '';
+  document.getElementById('exTimedReps').value = '';
+  document.getElementById('exTimedBenchReps').value = '';
+  document.getElementById('exHoldSec').value = '';
+  document.getElementById('exBenchHoldSec').value = '';
+  document.getElementById('exWeight').value = '';
+  document.getElementById('exWeightedReps').value = '';
+  document.getElementById('exBenchWeight').value = '';
+  document.getElementById('exWeightedBenchReps').value = '';
+  document.getElementById('exBandLevel').value = '1';
+  document.getElementById('exBenchBandLevel').value = '3';
+  document.getElementById('exBandedReps').value = '';
+  document.getElementById('exBandedBenchReps').value = '';
+  document.getElementById('exNotes').value = '';
+  document.getElementById('exCategory').value = category;
+  document.getElementById('exEditId').value = '';
+  document.getElementById('deleteBtn').style.display = 'none';
+  toggleTypeFields();
+  document.getElementById('exerciseModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const ex = state.exercises.find(e => e.id === id);
+  if (!ex) return;
+  document.getElementById('modalTitle').textContent = 'Edit Exercise';
+  document.getElementById('exName').value = ex.name;
+  document.getElementById('exType').value = ex.type;
+  document.getElementById('exSets').value = ex.sets || 3;
+  document.getElementById('exEachSide').checked = ex.eachSide || false;
+  document.getElementById('exCategory').value = ex.category;
+  document.getElementById('exEditId').value = ex.id;
+  document.getElementById('exNotes').value = ex.notes || '';
+  document.getElementById('deleteBtn').style.display = 'block';
+
+  // Fill type-specific fields
+  document.getElementById('exReps').value = ex.reps || '';
+  document.getElementById('exBenchReps').value = ex.benchReps || '';
+  document.getElementById('exTimedReps').value = ex.reps || '';
+  document.getElementById('exTimedBenchReps').value = ex.benchReps || '';
+  document.getElementById('exHoldSec').value = ex.holdSec || '';
+  document.getElementById('exBenchHoldSec').value = ex.benchHoldSec || '';
+  document.getElementById('exWeight').value = ex.weight || '';
+  document.getElementById('exWeightedReps').value = ex.reps || '';
+  document.getElementById('exBenchWeight').value = ex.benchWeight || '';
+  document.getElementById('exWeightedBenchReps').value = ex.benchReps || '';
+  document.getElementById('exBandLevel').value = ex.bandLevel || 1;
+  document.getElementById('exBenchBandLevel').value = ex.benchBandLevel || 3;
+  document.getElementById('exBandedReps').value = ex.reps || '';
+  document.getElementById('exBandedBenchReps').value = ex.benchReps || '';
+
+  toggleTypeFields();
+  document.getElementById('exerciseModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('exerciseModal').classList.remove('open');
+}
+
+function toggleTypeFields() {
+  const t = document.getElementById('exType').value;
+  document.getElementById('repsFields').style.display = t === 'reps' ? 'block' : 'none';
+  document.getElementById('timedFields').style.display = t === 'timed' ? 'block' : 'none';
+  document.getElementById('weightedFields').style.display = t === 'weighted' ? 'block' : 'none';
+  document.getElementById('bandedFields').style.display = t === 'banded' ? 'block' : 'none';
+  document.getElementById('setsGroup').style.display = t === 'done' ? 'none' : 'block';
+  document.getElementById('eachSideGroup').style.display = t === 'done' ? 'none' : 'flex';
+}
+
+function saveExercise() {
+  const name = document.getElementById('exName').value.trim();
+  if (!name) return;
+
+  const type = document.getElementById('exType').value;
+  const category = document.getElementById('exCategory').value;
+  const editId = document.getElementById('exEditId').value;
+  const sets = parseInt(document.getElementById('exSets').value) || 3;
+  const eachSide = document.getElementById('exEachSide').checked;
+  const notes = document.getElementById('exNotes').value.trim();
+
+  let reps = 0, benchReps = 0, holdSec = 0, benchHoldSec = 0, weight = 0, benchWeight = 0, bandLevel = 0, benchBandLevel = 0;
+
+  if (type === 'reps') {
+    reps = parseInt(document.getElementById('exReps').value) || 0;
+    benchReps = parseInt(document.getElementById('exBenchReps').value) || 0;
+  } else if (type === 'timed') {
+    reps = parseInt(document.getElementById('exTimedReps').value) || 0;
+    benchReps = parseInt(document.getElementById('exTimedBenchReps').value) || 0;
+    holdSec = parseInt(document.getElementById('exHoldSec').value) || 0;
+    benchHoldSec = parseInt(document.getElementById('exBenchHoldSec').value) || 0;
+  } else if (type === 'weighted') {
+    weight = parseInt(document.getElementById('exWeight').value) || 0;
+    reps = parseInt(document.getElementById('exWeightedReps').value) || 0;
+    benchWeight = parseInt(document.getElementById('exBenchWeight').value) || 0;
+    benchReps = parseInt(document.getElementById('exWeightedBenchReps').value) || 0;
+  } else if (type === 'banded') {
+    bandLevel = parseInt(document.getElementById('exBandLevel').value) || 1;
+    benchBandLevel = parseInt(document.getElementById('exBenchBandLevel').value) || 3;
+    reps = parseInt(document.getElementById('exBandedReps').value) || 0;
+    benchReps = parseInt(document.getElementById('exBandedBenchReps').value) || 0;
+  }
+
+  const data = { name, category, type, sets, reps, benchReps, holdSec, benchHoldSec, weight, benchWeight, bandLevel, benchBandLevel, eachSide, notes, group: 'General' };
+
+  if (editId) {
+    const ex = state.exercises.find(e => e.id === editId);
+    if (ex) {
+      data.group = ex.group; // preserve group
+      Object.assign(ex, data);
+    }
+  } else {
+    state.exercises.push({ id: genId(), ...data });
+  }
+
+  save();
+  closeModal();
+  renderExercises();
+  renderToday();
+}
+
+function deleteExercise() {
+  const editId = document.getElementById('exEditId').value;
+  if (!editId) return;
+  if (!confirm('Delete this exercise?')) return;
+  state.exercises = state.exercises.filter(e => e.id !== editId);
+  save();
+  closeModal();
+  renderExercises();
+  renderToday();
+}
+
+// ─── Log View ───────────────────────────────────────────────────────────
+function renderLog() {
+  let streakHtml = '';
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const exercises = getExercisesForDate(ds);
+    const dayLog = state.log[ds] || {};
+    const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
+    const isTodayClass = ds === todayStr() ? ' today' : '';
+    let statusClass = '';
+    if (exercises.length > 0) {
+      if (doneCount === exercises.length) statusClass = ' completed';
+      else if (doneCount > 0) statusClass = ' partial';
+    }
+    const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+    streakHtml += `<div class="streak-day${statusClass}${isTodayClass}" title="${dayLabel} ${ds}"></div>`;
+  }
+  document.getElementById('streakBar').innerHTML = streakHtml;
+
+  let logHtml = '';
+  const dates = Object.keys(state.log).sort().reverse().slice(0, 30);
+  if (!dates.length) {
+    logHtml = '<div class="empty-state">No logged exercises yet. Check off exercises in the Today view to start logging!</div>';
+  }
+  dates.forEach(ds => {
+    const dateObj = new Date(ds + 'T12:00:00');
+    const label = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const dayLog = state.log[ds];
+    const entries = Object.entries(dayLog).filter(([_, v]) => v.done);
+    if (!entries.length) return;
+
+    logHtml += `<div class="log-day"><div class="log-date">${label}</div>`;
+    entries.forEach(([exId, entry]) => {
+      const ex = state.exercises.find(e => e.id === exId);
+      if (!ex) return;
+      const ratio = getProgressRatio(ex);
+      const color = ratioToColor(ratio);
+      let detail = '';
+      if (ex.type === 'reps') {
+        detail = entry.repsPerSet ? ` — ${entry.repsPerSet.join(' / ')} reps` : ` — ${entry.reps} reps`;
+      } else if (ex.type === 'timed') detail = ` — ${entry.reps} &times; ${entry.holdSec}s`;
+      else if (ex.type === 'weighted') {
+        const repsStr = entry.repsPerSet ? entry.repsPerSet.join(' / ') : entry.reps;
+        detail = ` — ${entry.weight} lbs &times; ${repsStr}`;
+      }
+      else if (ex.type === 'banded') {
+        const repsStr = entry.repsPerSet ? entry.repsPerSet.join(' / ') : entry.reps;
+        detail = ` — ${BAND_NAMES[entry.bandLevel] || '?'} &times; ${repsStr}`;
+      }
+
+      logHtml += `<div class="log-entry"><div class="color-indicator" style="background:${color}"></div><span class="log-check">&#10003;</span> ${ex.name}${detail}</div>`;
+    });
+    // Protein for this day
+    const dayProtein = state.protein?.[ds];
+    if (dayProtein) {
+      const pColor = dayProtein >= PROTEIN_GOAL ? '#4caf50' : dayProtein >= PROTEIN_GOAL * 0.5 ? '#ff9800' : '#f44336';
+      logHtml += `<div class="log-entry"><div class="color-indicator" style="background:${pColor}"></div> Protein: ${dayProtein}g / ${PROTEIN_GOAL}g</div>`;
+    }
+    logHtml += '</div>';
+  });
+  document.getElementById('logList').innerHTML = logHtml;
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+renderToday();
+</script>
+</body>
+</html>
