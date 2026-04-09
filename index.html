@@ -923,7 +923,7 @@
 
 <script>
 // ─── Data ───────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'exerciseTracker_v9';
+const STORAGE_KEY = 'exerciseTracker_v10';
 const BAND_NAMES = { 1: 'X-Light', 2: 'Light', 3: 'Medium', 4: 'Heavy', 5: 'X-Heavy' };
 
 let state = loadState();
@@ -1527,6 +1527,11 @@ function renderTodayCard(ex, dayLog) {
     return renderGymWeightedCard(ex, entry, ratio, color);
   }
 
+  // Per-set exercises get inline inputs
+  if (ex.perSet) {
+    return renderPerSetCard(ex, entry, ratio, color);
+  }
+
   const checkedClass = done ? 'checked' : '';
   const doneClass = done ? 'done' : '';
   const canEdit = ex.type !== 'done';
@@ -1615,6 +1620,110 @@ function renderGymWeightedCard(ex, entry, ratio, color) {
         <button class="gym-log-btn" onclick="logGymExercise('${ex.id}', ${sets})">Log</button>
       </div>
     </div>`;
+}
+
+function renderPerSetCard(ex, entry, ratio, color) {
+  const done = entry?.done;
+  const checkedClass = done ? 'checked' : '';
+  const benchStr = fmtBenchmark(ex);
+  const notesStr = ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : '';
+  const side = ex.eachSide ? ', each side' : '';
+  const sets = ex.sets || 3;
+  const isBanded = ex.type === 'banded';
+
+  const existingReps = entry?.repsPerSet || [];
+  const bl = entry?.bandLevel ?? ex.bandLevel;
+
+  if (done) {
+    const repsStr = existingReps.length ? existingReps.join(' / ') : `${entry?.reps ?? ex.reps}`;
+    const bandStr = isBanded ? `${BAND_NAMES[entry.bandLevel] || 'None'} — ` : '';
+    return `
+      <div class="gym-inline-card checked">
+        <div class="gym-inline-header">
+          <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
+          <div class="exercise-info">
+            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-benchmark">${benchStr}</div>
+            ${notesStr}
+          </div>
+        </div>
+        <div class="gym-logged-summary">
+          <strong>${bandStr}${repsStr} reps</strong>${side}
+          <button class="gym-undo-btn" onclick="undoPerSetLog('${ex.id}')">undo</button>
+        </div>
+      </div>`;
+  }
+
+  let bandSelect = '';
+  if (isBanded) {
+    bandSelect = `
+      <div class="gym-input-group">
+        <label>Band</label>
+        <select id="perset-band-${ex.id}" style="width:80px;padding:6px 4px;background:#0f0f0f;border:1px solid #333;border-radius:5px;color:#e0e0e0;font-size:13px;outline:none">
+          <option value="0" ${bl==0?'selected':''}>None</option>
+          <option value="1" ${bl==1?'selected':''}>X-Light</option>
+          <option value="2" ${bl==2?'selected':''}>Light</option>
+          <option value="3" ${bl==3?'selected':''}>Medium</option>
+          <option value="4" ${bl==4?'selected':''}>Heavy</option>
+          <option value="5" ${bl==5?'selected':''}>X-Heavy</option>
+        </select>
+      </div>`;
+  }
+
+  let setInputs = '';
+  for (let i = 0; i < sets; i++) {
+    const val = existingReps[i] ?? ex.reps;
+    setInputs += `
+      <div class="gym-input-group">
+        <label>S${i+1}</label>
+        <input type="number" id="perset-reps-${ex.id}-${i}" value="${val}">
+      </div>`;
+  }
+
+  return `
+    <div class="gym-inline-card">
+      <div class="gym-inline-header">
+        <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
+        <div class="exercise-info">
+          <div class="exercise-name">${ex.name}${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''}</div>
+          <div class="exercise-benchmark">${benchStr}</div>
+          ${notesStr}
+        </div>
+      </div>
+      <div class="gym-inline-inputs">
+        ${bandSelect}
+        ${setInputs}
+        <button class="gym-log-btn" onclick="logPerSetExercise('${ex.id}', ${sets})">Log</button>
+      </div>
+    </div>`;
+}
+
+function logPerSetExercise(exId, sets) {
+  const ex = state.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
+
+  const repsPerSet = [];
+  for (let i = 0; i < sets; i++) {
+    repsPerSet.push(parseInt(document.getElementById(`perset-reps-${exId}-${i}`)?.value) || 0);
+  }
+  const avgReps = repsPerSet.length ? Math.round(repsPerSet.reduce((a,b) => a+b, 0) / repsPerSet.length) : 0;
+  const bandLevel = parseInt(document.getElementById(`perset-band-${exId}`)?.value) || ex.bandLevel || 0;
+
+  ex.reps = avgReps;
+  if (ex.type === 'banded') ex.bandLevel = bandLevel;
+
+  state.log[currentViewDate][exId] = { done: true, reps: avgReps, repsPerSet, holdSec: 0, weight: 0, bandLevel };
+  save();
+  renderToday();
+}
+
+function undoPerSetLog(exId) {
+  if (state.log[currentViewDate]?.[exId]) {
+    delete state.log[currentViewDate][exId];
+    save();
+    renderToday();
+  }
 }
 
 function logGymExercise(exId, sets) {
