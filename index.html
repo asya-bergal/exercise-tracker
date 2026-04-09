@@ -1414,8 +1414,35 @@ function changeDay(offset) {
 }
 
 function isGymDay(dateStr) {
+  if (!state.gymDayDates) state.gymDayDates = {};
+  return !!state.gymDayDates[dateStr];
+}
+
+function toggleGymDay(dateStr) {
+  if (!state.gymDayDates) state.gymDayDates = {};
+  if (state.gymDayDates[dateStr]) {
+    delete state.gymDayDates[dateStr];
+  } else {
+    state.gymDayDates[dateStr] = true;
+  }
+  save();
+  renderToday();
+}
+
+function gymDaysThisWeek(dateStr) {
+  if (!state.gymDayDates) return 0;
   const d = new Date(dateStr + 'T12:00:00');
-  return state.gymDays.includes(d.getDay());
+  const day = d.getDay(); // 0=Sun
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((day + 6) % 7)); // go back to Monday
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const check = new Date(monday);
+    check.setDate(monday.getDate() + i);
+    const ds = check.getFullYear() + '-' + String(check.getMonth()+1).padStart(2,'0') + '-' + String(check.getDate()).padStart(2,'0');
+    if (state.gymDayDates[ds]) count++;
+  }
+  return count;
 }
 
 function getExercisesForDate(dateStr) {
@@ -1460,8 +1487,12 @@ function renderToday() {
     }
   }
 
+  const weekCount = gymDaysThisWeek(currentViewDate);
+  const weekLabel = `<span style="font-size:11px;color:${weekCount >= 3 ? '#4caf50' : weekCount >= 1 ? '#ff9800' : '#666'}">${weekCount}/3-4 this week</span>`;
+
   if (gym.length) {
-    html += '<div class="section-title">Gym <span class="gym-day-indicator">Gym Day</span></div>';
+    html += `<div class="section-title">Gym <span class="gym-day-indicator">Gym Day</span> ${weekLabel}
+      <button style="float:right;background:none;border:none;color:#666;font-size:11px;cursor:pointer;text-decoration:underline" onclick="toggleGymDay('${currentViewDate}')">make rest day</button></div>`;
     const groups = {};
     gym.forEach(e => {
       const g = e.group || 'General';
@@ -1472,11 +1503,12 @@ function renderToday() {
       html += `<div class="subsection-title">${groupName}</div>`;
       exs.forEach(e => { html += renderTodayCard(e, dayLog); });
     }
-  } else if (!isGymDay(currentViewDate)) {
+  } else {
     const hasGym = state.exercises.some(e => e.category === 'gym');
     if (hasGym) {
-      html += '<div class="section-title">Gym</div>';
-      html += '<div class="rest-message"><span>&#128164;</span>Rest day — no gym exercises today</div>';
+      html += `<div class="section-title">Gym ${weekLabel}</div>`;
+      html += `<div class="rest-message"><span>&#128164;</span>Rest day — no gym exercises today<br>
+        <button style="margin-top:10px;padding:8px 20px;background:#7c83ff;border:none;border-radius:6px;color:#fff;font-size:13px;cursor:pointer" onclick="toggleGymDay('${currentViewDate}')">Make this a gym day</button></div>`;
     }
   }
 
