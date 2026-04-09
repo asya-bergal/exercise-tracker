@@ -1069,11 +1069,10 @@ function connectFirebase() {
   let configStr = raw;
   const match = raw.match(/\{[\s\S]*\}/);
   if (match) configStr = match[0];
-  // Convert JS object notation to valid JSON (unquoted keys)
-  configStr = configStr.replace(/(\w+)\s*:/g, '"$1":').replace(/'/g, '"').replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
 
   try {
-    const config = JSON.parse(configStr);
+    // Parse JS object literal (handles unquoted keys, single quotes, etc.)
+    const config = (new Function('return (' + configStr + ')'))();
     if (!config.databaseURL) {
       // Try to construct it from projectId
       if (config.projectId) {
