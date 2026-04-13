@@ -606,77 +606,13 @@
     color: #666;
   }
 
-  .sync-btn {
-    background: none;
-    border: none;
-    color: #555;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.15s;
-  }
-
-  .sync-btn:hover { color: #aaa; background: #2a2a3e; }
-  .sync-btn.connected { color: #4caf50; }
-  .sync-btn.error { color: #f44336; }
-
-  .sync-status {
-    font-size: 11px;
-    color: #666;
-    text-align: center;
-    margin-bottom: 12px;
-  }
-
-  .sync-status.ok { color: #4caf50; }
-  .sync-status.err { color: #f44336; }
-
-  .firebase-config-input {
-    width: 100%;
-    min-height: 100px;
-    padding: 10px 12px;
-    background: #0f0f0f;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #e0e0e0;
-    font-size: 12px;
-    font-family: monospace;
-    outline: none;
-    resize: vertical;
-  }
-
-  .firebase-config-input:focus { border-color: #7c83ff; }
-
-  .setup-steps {
-    font-size: 12px;
-    color: #888;
-    line-height: 1.6;
-    margin-bottom: 14px;
-  }
-
-  .setup-steps ol {
-    padding-left: 18px;
-  }
-
-  .setup-steps a {
-    color: #7c83ff;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Exercise Tracker</h1>
-  <div class="header-right">
-    <div class="date-display" id="headerDate"></div>
-    <button class="sync-btn" id="syncBtn" onclick="openSyncModal()" title="Sync settings">&#9881;</button>
-  </div>
+  <div class="date-display" id="headerDate"></div>
 </header>
 
 <nav>
@@ -882,32 +818,6 @@
   </div>
 </div>
 
-<!-- Sync Settings Modal -->
-<div class="modal-overlay" id="syncModal">
-  <div class="modal">
-    <h2>Sync Across Devices</h2>
-    <div id="syncStatusMsg" class="sync-status"></div>
-    <div class="setup-steps">
-      <ol>
-        <li>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></li>
-        <li>Create a new project (any name, disable analytics)</li>
-        <li>In the sidebar, click <strong>Build &rarr; Realtime Database</strong>, then <strong>Create Database</strong>, pick any location, choose <strong>Start in test mode</strong></li>
-        <li>Click the <strong>&lt;/&gt;</strong> (web) icon on the project overview page, give the app a name, and <strong>copy the firebaseConfig object</strong></li>
-        <li>Paste it below:</li>
-      </ol>
-    </div>
-    <div class="form-group">
-      <label>Firebase Config (JSON)</label>
-      <textarea class="firebase-config-input" id="firebaseConfigInput" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
-    </div>
-    <div class="modal-buttons">
-      <button class="btn btn-danger" id="disconnectBtn" style="display:none;margin-right:auto" onclick="disconnectFirebase()">Disconnect</button>
-      <button class="btn btn-secondary" onclick="closeSyncModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="connectFirebase()">Connect</button>
-    </div>
-  </div>
-</div>
-
 <!-- Log Detail Modal -->
 <div class="modal-overlay" id="logModal">
   <div class="modal">
@@ -955,18 +865,22 @@ function save() {
 }
 
 // ─── Firebase Sync ──────────────────────────────────────────────────────
-const FB_CONFIG_KEY = 'exerciseTracker_fbConfig';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBOQll7AcnIj_YVsvUdIKUc6h_nKRSHJM4",
+  authDomain: "exercise-tracker-ac2c0.firebaseapp.com",
+  databaseURL: "https://exercise-tracker-ac2c0-default-rtdb.firebaseio.com",
+  projectId: "exercise-tracker-ac2c0",
+  storageBucket: "exercise-tracker-ac2c0.firebasestorage.app",
+  messagingSenderId: "230605664983",
+  appId: "1:230605664983:web:d739aea48200a41e9ff692"
+};
+
 let fbDb = null;
 let fbRef = null;
 let fbIgnoreNext = false;
 
-function initFirebaseFromStorage() {
-  const raw = localStorage.getItem(FB_CONFIG_KEY);
-  if (!raw) return;
-  try {
-    const config = JSON.parse(raw);
-    startFirebase(config);
-  } catch(e) { /* no config saved */ }
+function initFirebase() {
+  startFirebase(FIREBASE_CONFIG);
 }
 
 function startFirebase(config) {
@@ -1008,10 +922,9 @@ function startFirebase(config) {
       }
     });
 
-    updateSyncIndicator(true);
+    console.log('Firebase connected');
   } catch(e) {
     console.error('Firebase error:', e);
-    updateSyncIndicator(false);
   }
 }
 
@@ -1024,82 +937,12 @@ function syncToFirebase() {
   });
 }
 
-function updateSyncIndicator(connected) {
-  const btn = document.getElementById('syncBtn');
-  btn.classList.toggle('connected', connected);
-  btn.classList.toggle('error', !connected);
-  btn.title = connected ? 'Synced' : 'Sync settings';
-}
-
 function renderCurrentView() {
   const active = document.querySelector('nav button.active');
   if (!active) return;
   const idx = Array.from(document.querySelectorAll('nav button')).indexOf(active);
   const views = ['today', 'exercises', 'log'];
   showView(views[idx] || 'today');
-}
-
-function openSyncModal() {
-  const raw = localStorage.getItem(FB_CONFIG_KEY);
-  document.getElementById('firebaseConfigInput').value = raw || '';
-  document.getElementById('disconnectBtn').style.display = raw ? 'block' : 'none';
-  const msg = document.getElementById('syncStatusMsg');
-  if (fbRef) {
-    msg.textContent = 'Connected and syncing';
-    msg.className = 'sync-status ok';
-  } else if (raw) {
-    msg.textContent = 'Config saved but not connected — check config';
-    msg.className = 'sync-status err';
-  } else {
-    msg.textContent = '';
-    msg.className = 'sync-status';
-  }
-  document.getElementById('syncModal').classList.add('open');
-}
-
-function closeSyncModal() {
-  document.getElementById('syncModal').classList.remove('open');
-}
-
-function connectFirebase() {
-  const raw = document.getElementById('firebaseConfigInput').value.trim();
-  if (!raw) return;
-
-  // Handle both raw JSON and "const firebaseConfig = {...}" pasted from Firebase console
-  let configStr = raw;
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (match) configStr = match[0];
-
-  try {
-    // Parse JS object literal (handles unquoted keys, single quotes, etc.)
-    const config = (new Function('return (' + configStr + ')'))();
-    if (!config.databaseURL) {
-      // Try to construct it from projectId
-      if (config.projectId) {
-        config.databaseURL = `https://${config.projectId}-default-rtdb.firebaseio.com`;
-      } else {
-        alert('Config must include databaseURL or projectId');
-        return;
-      }
-    }
-    localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(config));
-    startFirebase(config);
-    // Push current state to Firebase
-    syncToFirebase();
-    closeSyncModal();
-  } catch(e) {
-    alert('Invalid config JSON: ' + e.message);
-  }
-}
-
-function disconnectFirebase() {
-  if (fbRef) fbRef.off();
-  fbDb = null;
-  fbRef = null;
-  localStorage.removeItem(FB_CONFIG_KEY);
-  updateSyncIndicator(false);
-  document.getElementById('syncBtn').classList.remove('connected', 'error');
-  closeSyncModal();
 }
 
 function genId() { return 'ex-' + Math.random().toString(36).slice(2, 9); }
@@ -2233,7 +2076,7 @@ function renderLog() {
 // ─── Init ───────────────────────────────────────────────────────────────
 document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 renderToday();
-initFirebaseFromStorage();
+initFirebase();
 </script>
 </body>
 </html>
