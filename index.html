@@ -397,29 +397,6 @@
     text-align: center;
   }
 
-  .gym-day-indicator {
-    display: inline-block;
-    background: #2a2a3e;
-    color: #7c83ff;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 8px;
-  }
-
-  .rest-message {
-    background: #1a1a2e;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    color: #666;
-    border: 1px solid #2a2a3e;
-    margin-bottom: 8px;
-  }
-
-  .rest-message span { font-size: 24px; display: block; margin-bottom: 8px; }
-
   .subsection-title {
     font-size: 12px;
     font-weight: 600;
@@ -434,7 +411,7 @@
     margin-top: 2px;
   }
 
-  /* Inline gym card */
+  /* Inline exercise card (weighted / per-set) */
   .gym-inline-card {
     background: #1a1a2e;
     border-radius: 10px;
@@ -606,6 +583,83 @@
     color: #666;
   }
 
+  /* Weekly badge */
+  .weekly-badge {
+    font-size: 10px;
+    background: #2a2a3e;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* Low priority collapsed section */
+  .low-priority-section {
+    margin-top: 8px;
+  }
+
+  .low-priority-summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .low-priority-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .low-priority-summary::marker {
+    display: none;
+    content: '';
+  }
+
+  .low-priority-summary .toggle-arrow {
+    font-size: 10px;
+    margin-left: 6px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+
+  details.low-priority-section[open] .toggle-arrow {
+    transform: rotate(90deg);
+  }
+
+  .skip-btn {
+    background: none;
+    border: none;
+    color: #444;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .skip-btn:hover { color: #ff6666; background: #2a2a3e; }
+
+  .skipped-summary {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 12px;
+    margin-top: 8px;
+  }
+
+  .skipped-summary button {
+    background: none;
+    border: none;
+    color: #7c83ff;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: underline;
+    margin-left: 4px;
+  }
+
+  .skipped-summary button:hover { color: #9a9fff; }
+
 </style>
 </head>
 <body>
@@ -637,7 +691,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statTotal">0</div>
-        <div class="stat-label">Total Today</div>
+        <div class="stat-label">Total</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statStreak">0</div>
@@ -659,15 +713,8 @@
 
   <!-- EXERCISES VIEW -->
   <div class="view" id="view-exercises">
-    <div class="section-title">Daily Exercises</div>
-    <div class="section-subtitle">Every day</div>
-    <div id="dailyExercisesList"></div>
-    <button class="add-btn" onclick="openAddModal('daily')">+ Add Daily Exercise</button>
-
-    <div class="section-title">Gym Exercises</div>
-    <div class="section-subtitle">3 &ndash; 4 times per week</div>
-    <div id="gymExercisesList"></div>
-    <button class="add-btn" onclick="openAddModal('gym')">+ Add Gym Exercise</button>
+    <div id="exercisesList"></div>
+    <button class="add-btn" onclick="openAddModal()">+ Add Exercise</button>
   </div>
 
   <!-- LOG VIEW -->
@@ -685,6 +732,13 @@
     <div class="form-group">
       <label>Exercise Name</label>
       <input type="text" id="exName" placeholder="e.g. Dead Bug">
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <select id="exPriority">
+        <option value="high">High</option>
+        <option value="low">Low</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Type</label>
@@ -748,7 +802,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Your Weight (lbs)</label>
-          <input type="number" id="exWeight" placeholder="0">
+          <input type="number" id="exWeight" placeholder="0" step="0.5">
         </div>
         <div class="form-group">
           <label>Your Reps</label>
@@ -758,7 +812,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Benchmark Weight (lbs)</label>
-          <input type="number" id="exBenchWeight" placeholder="0">
+          <input type="number" id="exBenchWeight" placeholder="0" step="0.5">
         </div>
         <div class="form-group">
           <label>Benchmark Reps</label>
@@ -808,7 +862,6 @@
       <input type="text" id="exNotes" placeholder="e.g. each side, focus on form">
     </div>
 
-    <input type="hidden" id="exCategory">
     <input type="hidden" id="exEditId">
     <div class="modal-buttons">
       <button class="btn btn-danger" id="deleteBtn" style="display:none;margin-right:auto" onclick="deleteExercise()">Delete</button>
@@ -833,8 +886,13 @@
 
 <script>
 // ─── Data ───────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'exerciseTracker_v11';
+const STORAGE_KEY = 'exerciseTracker_v12';
 const BAND_NAMES = { 1: 'X-Light', 2: 'Light', 3: 'Medium', 4: 'Heavy', 5: 'X-Heavy' };
+const LOW_PRIORITY_GROUPS = ['Mobility', 'Activation & Stability', 'Daily Practice'];
+const PER_SET_EXERCISES = [
+  'Single Leg Glute Bridge', 'Calf Raise', 'Single Arm Bent Over Row',
+  'Straight Leg Raise', 'Standing Knee Raises', 'Side Lying Hip Abduction (Band)'
+];
 
 let state = loadState();
 let currentViewDate = todayStr();
@@ -844,18 +902,47 @@ function todayStr() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+function fmtDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) return JSON.parse(raw);
+  let raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    // Migrate from v11
+    raw = localStorage.getItem('exerciseTracker_v11');
+  }
+  if (raw) {
+    const s = JSON.parse(raw);
+    migrateState(s);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    return s;
+  }
   return defaultState();
+}
+
+function migrateState(s) {
+  if (s.exercises) {
+    s.exercises.forEach(e => {
+      if (!e.priority) {
+        e.priority = LOW_PRIORITY_GROUPS.includes(e.group) ? 'low' : 'high';
+      }
+      if (PER_SET_EXERCISES.includes(e.name) && !e.perSet) {
+        e.perSet = true;
+      }
+      delete e.category;
+    });
+  }
+  delete s.gymDays;
+  delete s.gymDayDates;
+  return s;
 }
 
 function defaultState() {
   return {
     exercises: getDefaultExercises(),
     log: {},
-    protein: {},
-    gymDays: [1, 3, 5]
+    protein: {}
   };
 }
 
@@ -913,8 +1000,11 @@ function startFirebase(config) {
           Object.assign(merged.protein, remote.protein);
         }
         // Use remote exercises if they exist (last writer wins for exercise list)
-        if (remote.exercises) merged.exercises = remote.exercises;
-        if (remote.gymDays) merged.gymDays = remote.gymDays;
+        if (remote.exercises) {
+          merged.exercises = remote.exercises;
+          // Ensure migrated
+          migrateState(merged);
+        }
 
         state = merged;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -949,188 +1039,187 @@ function genId() { return 'ex-' + Math.random().toString(36).slice(2, 9); }
 
 function getDefaultExercises() {
   return [
-    // ── Daily PT / Rehab ──
-    // Mobility
-    { id: genId(), name: 'Sidelying Thoracic Rotation (Open Book)', category: 'daily', group: 'Mobility',
+    // ── Mobility (low priority) ──
+    { id: genId(), name: 'Sidelying Thoracic Rotation (Open Book)', priority: 'low', group: 'Mobility',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Standing Thoracic Open Book at Wall', category: 'daily', group: 'Mobility',
+    { id: genId(), name: 'Standing Thoracic Open Book at Wall', priority: 'low', group: 'Mobility',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Standing ITB Stretch', category: 'daily', group: 'Mobility',
+    { id: genId(), name: 'Standing ITB Stretch', priority: 'low', group: 'Mobility',
       type: 'timed', sets: 1, reps: 3, benchReps: 3, holdSec: 20, benchHoldSec: 30, eachSide: true,
       weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    // Activation & Stability
-    { id: genId(), name: 'Seated Pelvic Tilt', category: 'daily', group: 'Activation & Stability',
+    // ── Activation & Stability (low priority) ──
+    { id: genId(), name: 'Seated Pelvic Tilt', priority: 'low', group: 'Activation & Stability',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Seated Scapular Retraction', category: 'daily', group: 'Activation & Stability',
+    { id: genId(), name: 'Seated Scapular Retraction', priority: 'low', group: 'Activation & Stability',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Static Prone on Elbows', category: 'daily', group: 'Activation & Stability',
+    { id: genId(), name: 'Static Prone on Elbows', priority: 'low', group: 'Activation & Stability',
       type: 'timed', sets: 1, reps: 8, benchReps: 8, holdSec: 10, benchHoldSec: 30, eachSide: false,
       weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    // Strengthening
-    { id: genId(), name: 'Straight Leg Raise', category: 'daily', group: 'Strengthening',
+    // ── Strengthening (high priority) ──
+    { id: genId(), name: 'Straight Leg Raise', priority: 'high', group: 'Strengthening',
       type: 'reps', sets: 3, reps: 10, benchReps: 20, eachSide: true, perSet: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'AMRAP each set' },
 
-    { id: genId(), name: 'Supine 90-90 Alternating Heel Touches (PPT)', category: 'daily', group: 'Strengthening',
+    { id: genId(), name: 'Supine 90-90 Alternating Heel Touches (PPT)', priority: 'high', group: 'Strengthening',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Maintain posterior pelvic tilt throughout' },
 
-    { id: genId(), name: 'Side Lying Hip Abduction (Band)', category: 'daily', group: 'Strengthening',
+    { id: genId(), name: 'Side Lying Hip Abduction (Band)', priority: 'high', group: 'Strengthening',
       type: 'banded', sets: 3, reps: 10, benchReps: 15, bandLevel: 2, benchBandLevel: 3, eachSide: true, perSet: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0,
       notes: 'Slowly escalate band over time' },
 
-    // ── Transverse Abdominis Progression ──
-    { id: genId(), name: 'Dead Bug', category: 'daily', group: 'Transverse Abdominis',
+    // ── Transverse Abdominis (high priority) ──
+    { id: genId(), name: 'Dead Bug', priority: 'high', group: 'Transverse Abdominis',
       type: 'reps', sets: 3, reps: 12, benchReps: 12, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Opposite arm + leg; keep low back pressed to floor' },
 
-    { id: genId(), name: 'Bird Dog', category: 'daily', group: 'Transverse Abdominis',
+    { id: genId(), name: 'Bird Dog', priority: 'high', group: 'Transverse Abdominis',
       type: 'reps', sets: 3, reps: 12, benchReps: 12, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Opposite arm + leg; keep hips level' },
 
-    { id: genId(), name: 'Pallof Press', category: 'daily', group: 'Transverse Abdominis',
+    { id: genId(), name: 'Pallof Press', priority: 'high', group: 'Transverse Abdominis',
       type: 'reps', sets: 3, reps: 10, benchReps: 10, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Cable or band; resist rotation' },
 
-    { id: genId(), name: 'Hollow Body Hold', category: 'daily', group: 'Transverse Abdominis',
+    { id: genId(), name: 'Hollow Body Hold', priority: 'high', group: 'Transverse Abdominis',
       type: 'timed', sets: 3, reps: 1, benchReps: 1, holdSec: 10, benchHoldSec: 30, eachSide: false,
       weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Modify by bending knees if needed' },
 
-    // ── Deep Cervical Flexor Progression ──
-    { id: genId(), name: 'Supine Chin Tuck & Hold', category: 'daily', group: 'Deep Cervical Flexors',
+    // ── Deep Cervical Flexors (high priority) ──
+    { id: genId(), name: 'Supine Chin Tuck & Hold', priority: 'high', group: 'Deep Cervical Flexors',
       type: 'timed', sets: 3, reps: 5, benchReps: 10, holdSec: 5, benchHoldSec: 10, eachSide: false,
       weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Tuck chin, lift head just off floor' },
 
-    { id: genId(), name: 'Supine Chin Tuck Head Lift', category: 'daily', group: 'Deep Cervical Flexors',
+    { id: genId(), name: 'Supine Chin Tuck Head Lift', priority: 'high', group: 'Deep Cervical Flexors',
       type: 'timed', sets: 3, reps: 3, benchReps: 10, holdSec: 3, benchHoldSec: 10, eachSide: false,
       weight: 0, benchWeight: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Lift head higher while maintaining chin tuck; progression from above' },
 
-    { id: genId(), name: 'Prone Chin Tuck', category: 'daily', group: 'Deep Cervical Flexors',
+    { id: genId(), name: 'Prone Chin Tuck', priority: 'high', group: 'Deep Cervical Flexors',
       type: 'reps', sets: 3, reps: 5, benchReps: 10, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Face down; tuck chin toward throat' },
 
-    // ── Strengthening (cont.) ──
-    { id: genId(), name: 'Standing Knee Raises', category: 'daily', group: 'Strengthening',
+    // ── Strengthening (cont., high priority) ──
+    { id: genId(), name: 'Standing Knee Raises', priority: 'high', group: 'Strengthening',
       type: 'reps', sets: 3, reps: 10, benchReps: 15, eachSide: true, perSet: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    // ── Daily Practice ──
-    { id: genId(), name: 'Progressive Core Work (Sit-Up Engagement)', category: 'daily', group: 'Daily Practice',
+    // ── Daily Practice (low priority) ──
+    { id: genId(), name: 'Progressive Core Work (Sit-Up Engagement)', priority: 'low', group: 'Daily Practice',
       type: 'done', sets: 0, reps: 0, benchReps: 0, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Practice engaging core while sitting up; currently reliable only lying down' },
 
-    { id: genId(), name: 'Dowel Deadlift Practice', category: 'daily', group: 'Daily Practice',
+    { id: genId(), name: 'Dowel Deadlift Practice', priority: 'low', group: 'Daily Practice',
       type: 'done', sets: 0, reps: 0, benchReps: 0, eachSide: false,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Practice deadlift form with dowel' },
 
-    // ── Gym (3-4x/week) ── Upper Body
-    { id: genId(), name: 'Standing Trap Shrug', category: 'gym', group: 'Upper Body',
+    // ── Upper Body (high priority) ──
+    { id: genId(), name: 'Standing Trap Shrug', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 10, benchReps: 12, weight: 10, benchWeight: 20, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Dumbbells' },
 
-    { id: genId(), name: 'Single Arm Bent Over Row', category: 'gym', group: 'Upper Body',
-      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 8, benchWeight: 15, eachSide: true,
+    { id: genId(), name: 'Single Arm Bent Over Row', priority: 'high', group: 'Upper Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 8, benchWeight: 15, eachSide: true, perSet: true,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Bent Over Reverse Fly', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Bent Over Reverse Fly', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 3, benchWeight: 8, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Dumbbells' },
 
-    { id: genId(), name: 'Dumbbell Bench Press', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Dumbbell Bench Press', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 10, benchWeight: 15, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Weight per dumbbell' },
 
-    { id: genId(), name: 'Seated Row', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Seated Row', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 25, benchWeight: 40, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Prone I Raises', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Prone I Raises', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Light weights; arms straight overhead' },
 
-    { id: genId(), name: 'Prone Y Raises', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Prone Y Raises', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Light weights; arms in Y position' },
 
-    { id: genId(), name: 'Prone T Raises', category: 'gym', group: 'Upper Body',
+    { id: genId(), name: 'Prone T Raises', priority: 'high', group: 'Upper Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 10, weight: 2, benchWeight: 5, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Light weights; arms straight out to sides' },
 
-    // Lower Body
-    { id: genId(), name: 'Goblet Squat', category: 'gym', group: 'Lower Body',
+    // ── Lower Body (high priority) ──
+    { id: genId(), name: 'Goblet Squat', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 25, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Kettlebell Deadlift', category: 'gym', group: 'Lower Body',
+    { id: genId(), name: 'Kettlebell Deadlift', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 20, benchWeight: 35, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Leg Press', category: 'gym', group: 'Lower Body',
+    { id: genId(), name: 'Leg Press', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 50, benchWeight: 90, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Knee Extension', category: 'gym', group: 'Lower Body',
+    { id: genId(), name: 'Knee Extension', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 30, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Hamstring Curl', category: 'gym', group: 'Lower Body',
+    { id: genId(), name: 'Hamstring Curl', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 25, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Hip Extension Machine', category: 'gym', group: 'Lower Body',
+    { id: genId(), name: 'Hip Extension Machine', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 20, benchWeight: 40, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: '' },
 
-    { id: genId(), name: 'Calf Raise', category: 'gym', group: 'Lower Body',
-      type: 'weighted', sets: 3, reps: 10, benchReps: 15, eachSide: true,
+    { id: genId(), name: 'Calf Raise', priority: 'high', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 10, benchReps: 15, eachSide: true, perSet: true,
       weight: 0, benchWeight: 20, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Single leg; start bodyweight, add dumbbell to progress' },
 
-    { id: genId(), name: 'Single Leg Glute Bridge', category: 'gym', group: 'Lower Body',
-      type: 'weighted', sets: 3, reps: 8, benchReps: 15, eachSide: true,
+    { id: genId(), name: 'Single Leg Glute Bridge', priority: 'high', group: 'Lower Body',
+      type: 'weighted', sets: 3, reps: 8, benchReps: 15, eachSide: true, perSet: true,
       weight: 0, benchWeight: 25, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Weight on hips; start bodyweight' },
   ];
@@ -1236,6 +1325,28 @@ function fmtCurrent(ex, entry) {
   return '—';
 }
 
+// ─── Weekly completion tracking ─────────────────────────────────────────
+function weeklyCompletionCount(exId, dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay(); // 0=Sun
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((day + 6) % 7));
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const check = new Date(monday);
+    check.setDate(monday.getDate() + i);
+    const ds = fmtDateStr(check);
+    if (state.log[ds]?.[exId]?.done) count++;
+  }
+  return count;
+}
+
+function weeklyBadgeHtml(exId, dateStr) {
+  const count = weeklyCompletionCount(exId, dateStr);
+  const color = count >= 3 ? '#4caf50' : count >= 1 ? '#ff9800' : '#666';
+  return `<span class="weekly-badge" style="color:${color}">${count}/3-4</span>`;
+}
+
 // ─── Views ──────────────────────────────────────────────────────────────
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1252,48 +1363,34 @@ function showView(name) {
 function changeDay(offset) {
   const d = new Date(currentViewDate + 'T12:00:00');
   d.setDate(d.getDate() + offset);
-  currentViewDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  currentViewDate = fmtDateStr(d);
   renderToday();
 }
 
-function isGymDay(dateStr) {
-  if (!state.gymDayDates) state.gymDayDates = {};
-  return !!state.gymDayDates[dateStr];
-}
+function renderPriorityExercises(exercises, dayLog) {
+  // Group by group name
+  const groups = {};
+  exercises.forEach(e => {
+    const g = e.group || 'General';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(e);
+  });
 
-function toggleGymDay(dateStr) {
-  if (!state.gymDayDates) state.gymDayDates = {};
-  if (state.gymDayDates[dateStr]) {
-    delete state.gymDayDates[dateStr];
-  } else {
-    state.gymDayDates[dateStr] = true;
-  }
-  save();
-  renderToday();
-}
+  // Sort groups by minimum weekly count (most urgent first)
+  const groupEntries = Object.entries(groups);
+  groupEntries.sort((a, b) => {
+    const minA = Math.min(...a[1].map(e => weeklyCompletionCount(e.id, currentViewDate)));
+    const minB = Math.min(...b[1].map(e => weeklyCompletionCount(e.id, currentViewDate)));
+    return minA - minB;
+  });
 
-function gymDaysThisWeek(dateStr) {
-  if (!state.gymDayDates) return 0;
-  const d = new Date(dateStr + 'T12:00:00');
-  const day = d.getDay(); // 0=Sun
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((day + 6) % 7)); // go back to Monday
-  let count = 0;
-  for (let i = 0; i < 7; i++) {
-    const check = new Date(monday);
-    check.setDate(monday.getDate() + i);
-    const ds = check.getFullYear() + '-' + String(check.getMonth()+1).padStart(2,'0') + '-' + String(check.getDate()).padStart(2,'0');
-    if (state.gymDayDates[ds]) count++;
+  let html = '';
+  for (const [groupName, exs] of groupEntries) {
+    exs.sort((a, b) => weeklyCompletionCount(a.id, currentViewDate) - weeklyCompletionCount(b.id, currentViewDate));
+    html += `<div class="subsection-title">${groupName}</div>`;
+    exs.forEach(e => { html += renderTodayCard(e, dayLog); });
   }
-  return count;
-}
-
-function getExercisesForDate(dateStr) {
-  const daily = state.exercises.filter(e => e.category === 'daily');
-  if (isGymDay(dateStr)) {
-    return [...daily, ...state.exercises.filter(e => e.category === 'gym')];
-  }
-  return daily;
+  return html;
 }
 
 function renderToday() {
@@ -1303,56 +1400,37 @@ function renderToday() {
   const isToday = currentViewDate === todayStr();
   document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '');
 
-  const exercises = getExercisesForDate(currentViewDate);
   const dayLog = state.log[currentViewDate] || {};
-  const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
+  const active = state.exercises.filter(e => !dayLog[e.id]?.skipped);
+  const skippedCount = state.exercises.length - active.length;
+  const doneCount = active.filter(e => dayLog[e.id]?.done).length;
 
   document.getElementById('statDone').textContent = doneCount;
-  document.getElementById('statTotal').textContent = exercises.length;
+  document.getElementById('statTotal').textContent = active.length;
   document.getElementById('statStreak').textContent = calcStreak();
 
-  let html = '';
-  const daily = exercises.filter(e => e.category === 'daily');
-  const gym = exercises.filter(e => e.category === 'gym');
+  const highPriority = active.filter(e => e.priority === 'high');
+  const lowPriority = active.filter(e => e.priority === 'low');
 
-  if (daily.length) {
-    // Group by group name
-    const groups = {};
-    daily.forEach(e => {
-      const g = e.group || 'General';
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(e);
-    });
-    html += '<div class="section-title">Daily Exercises</div>';
-    for (const [groupName, exs] of Object.entries(groups)) {
-      html += `<div class="subsection-title">${groupName}</div>`;
-      exs.forEach(e => { html += renderTodayCard(e, dayLog); });
-    }
+  let html = '';
+
+  // High priority section
+  if (highPriority.length) {
+    html += '<div class="section-title">Priority Exercises</div>';
+    html += renderPriorityExercises(highPriority, dayLog);
   }
 
-  const weekCount = gymDaysThisWeek(currentViewDate);
-  const weekLabel = `<span style="font-size:11px;color:${weekCount >= 3 ? '#4caf50' : weekCount >= 1 ? '#ff9800' : '#666'}">${weekCount}/3-4 this week</span>`;
+  // Low priority section (collapsed)
+  if (lowPriority.length) {
+    html += '<details class="low-priority-section">';
+    html += '<summary class="section-title low-priority-summary">Low Priority <span class="toggle-arrow">&#9656;</span></summary>';
+    html += renderPriorityExercises(lowPriority, dayLog);
+    html += '</details>';
+  }
 
-  if (gym.length) {
-    html += `<div class="section-title">Gym <span class="gym-day-indicator">Gym Day</span> ${weekLabel}
-      <button style="float:right;background:none;border:none;color:#666;font-size:11px;cursor:pointer;text-decoration:underline" onclick="toggleGymDay('${currentViewDate}')">make rest day</button></div>`;
-    const groups = {};
-    gym.forEach(e => {
-      const g = e.group || 'General';
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(e);
-    });
-    for (const [groupName, exs] of Object.entries(groups)) {
-      html += `<div class="subsection-title">${groupName}</div>`;
-      exs.forEach(e => { html += renderTodayCard(e, dayLog); });
-    }
-  } else {
-    const hasGym = state.exercises.some(e => e.category === 'gym');
-    if (hasGym) {
-      html += `<div class="section-title">Gym ${weekLabel}</div>`;
-      html += `<div class="rest-message"><span>&#128164;</span>Rest day — no gym exercises today<br>
-        <button style="margin-top:10px;padding:8px 20px;background:#7c83ff;border:none;border-radius:6px;color:#fff;font-size:13px;cursor:pointer" onclick="toggleGymDay('${currentViewDate}')">Make this a gym day</button></div>`;
-    }
+  // Skipped summary
+  if (skippedCount > 0) {
+    html += `<div class="skipped-summary">${skippedCount} exercise${skippedCount > 1 ? 's' : ''} skipped<button onclick="unskipAll()">undo all</button></div>`;
   }
 
   document.getElementById('todayList').innerHTML = html;
@@ -1364,15 +1442,16 @@ function renderTodayCard(ex, dayLog) {
   const done = entry?.done;
   const ratio = getProgressRatio(ex);
   const color = ratioToColor(ratio);
+  const badge = weeklyBadgeHtml(ex.id, currentViewDate);
 
-  // Gym weighted exercises get inline inputs
-  if (ex.category === 'gym' && ex.type === 'weighted') {
-    return renderGymWeightedCard(ex, entry, ratio, color);
+  // Per-set exercises get inline inputs (check first so weighted+perSet gets L/R)
+  if (ex.perSet) {
+    return renderPerSetCard(ex, entry, ratio, color, badge);
   }
 
-  // Per-set exercises get inline inputs
-  if (ex.perSet) {
-    return renderPerSetCard(ex, entry, ratio, color);
+  // Weighted exercises get inline inputs
+  if (ex.type === 'weighted') {
+    return renderWeightedCard(ex, entry, ratio, color, badge);
   }
 
   const checkedClass = done ? 'checked' : '';
@@ -1391,7 +1470,7 @@ function renderTodayCard(ex, dayLog) {
       <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
       <button class="exercise-check ${doneClass}" onclick="toggleDone('${ex.id}')">&#10003;</button>
       <div class="exercise-info">
-        <div class="exercise-name">${ex.name}</div>
+        <div class="exercise-name">${ex.name} ${badge}</div>
         <div class="exercise-prescription">${prescStr}</div>
         <div class="exercise-benchmark">${benchStr}</div>
         ${notesStr}
@@ -1400,10 +1479,11 @@ function renderTodayCard(ex, dayLog) {
         <div class="exercise-current-value">${currentStr}</div>
         ${canEdit ? '<div class="exercise-current-label">tap to edit</div>' : ''}
       </div>
+      ${!done ? `<button class="skip-btn" onclick="skipExercise('${ex.id}')" title="Skip today">&#10005;</button>` : ''}
     </div>`;
 }
 
-function renderGymWeightedCard(ex, entry, ratio, color) {
+function renderWeightedCard(ex, entry, ratio, color, badge) {
   const done = entry?.done;
   const checkedClass = done ? 'checked' : '';
   const benchStr = fmtBenchmark(ex);
@@ -1421,7 +1501,7 @@ function renderGymWeightedCard(ex, entry, ratio, color) {
         <div class="gym-inline-header">
           <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
           <div class="exercise-info">
-            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-name">${ex.name} ${badge}</div>
             <div class="exercise-benchmark">${benchStr}</div>
             ${notesStr}
           </div>
@@ -1448,15 +1528,16 @@ function renderGymWeightedCard(ex, entry, ratio, color) {
       <div class="gym-inline-header">
         <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
         <div class="exercise-info">
-          <div class="exercise-name">${ex.name}${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''}</div>
+          <div class="exercise-name">${ex.name}${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
           <div class="exercise-benchmark">${benchStr}</div>
           ${notesStr}
         </div>
+        <button class="skip-btn" onclick="skipExercise('${ex.id}')" title="Skip today">&#10005;</button>
       </div>
       <div class="gym-inline-inputs">
         <div class="gym-input-group weight-group">
           <label>Weight</label>
-          <input type="number" id="gym-weight-${ex.id}" value="${lastWeight}">
+          <input type="number" id="gym-weight-${ex.id}" value="${lastWeight}" step="0.5">
         </div>
         <div class="gym-input-divider">&times;</div>
         ${setInputs}
@@ -1465,17 +1546,20 @@ function renderGymWeightedCard(ex, entry, ratio, color) {
     </div>`;
 }
 
-function renderPerSetCard(ex, entry, ratio, color) {
+function renderPerSetCard(ex, entry, ratio, color, badge) {
   const done = entry?.done;
   const benchStr = fmtBenchmark(ex);
   const notesStr = ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : '';
   const sets = ex.sets || 3;
   const isBanded = ex.type === 'banded';
+  const isWeighted = ex.type === 'weighted';
   const hasSides = ex.eachSide;
   const bl = entry?.bandLevel ?? ex.bandLevel;
+  const lastWeight = entry?.weight ?? ex.weight;
 
   if (done) {
     const bandStr = isBanded ? `${BAND_NAMES[entry.bandLevel] || 'None'} — ` : '';
+    const weightStr = isWeighted ? `<strong>${entry.weight} lbs</strong> &mdash; ` : '';
     let repsDisplay = '';
     if (hasSides && entry?.repsL && entry?.repsR) {
       repsDisplay = `L: ${entry.repsL.join(' / ')} &nbsp; R: ${entry.repsR.join(' / ')}`;
@@ -1489,15 +1573,24 @@ function renderPerSetCard(ex, entry, ratio, color) {
         <div class="gym-inline-header">
           <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
           <div class="exercise-info">
-            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-name">${ex.name} ${badge}</div>
             <div class="exercise-benchmark">${benchStr}</div>
             ${notesStr}
           </div>
         </div>
         <div class="gym-logged-summary">
-          <strong>${bandStr}${repsDisplay}</strong>
+          ${weightStr}<strong>${bandStr}${repsDisplay}</strong>
           <button class="gym-undo-btn" onclick="undoPerSetLog('${ex.id}')">undo</button>
         </div>
+      </div>`;
+  }
+
+  let weightInput = '';
+  if (isWeighted) {
+    weightInput = `
+      <div class="gym-input-group weight-group">
+        <label>Weight</label>
+        <input type="number" id="perset-weight-${ex.id}" value="${lastWeight}" step="0.5">
       </div>`;
   }
 
@@ -1553,11 +1646,13 @@ function renderPerSetCard(ex, entry, ratio, color) {
       <div class="gym-inline-header">
         <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
         <div class="exercise-info">
-          <div class="exercise-name">${ex.name}${hasSides ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''}</div>
+          <div class="exercise-name">${ex.name}${hasSides ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
           <div class="exercise-benchmark">${benchStr}</div>
           ${notesStr}
         </div>
+        <button class="skip-btn" onclick="skipExercise('${ex.id}')" title="Skip today">&#10005;</button>
       </div>
+      ${weightInput ? `<div class="gym-inline-inputs" style="margin-bottom:6px">${weightInput}</div>` : ''}
       ${bandSelect ? `<div class="gym-inline-inputs" style="margin-bottom:6px">${bandSelect}</div>` : ''}
       ${hasSides ? setInputs : `<div class="gym-inline-inputs">${setInputs}</div>`}
       <div style="text-align:right;margin-top:8px">
@@ -1572,7 +1667,10 @@ function logPerSetExercise(exId, sets) {
   if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
 
   const bandLevel = parseInt(document.getElementById(`perset-band-${exId}`)?.value) || ex.bandLevel || 0;
+  const weight = parseFloat(document.getElementById(`perset-weight-${exId}`)?.value) || ex.weight || 0;
   let logEntry;
+
+  if (ex.type === 'weighted') ex.weight = weight;
 
   if (ex.eachSide) {
     const repsL = [], repsR = [];
@@ -1584,7 +1682,7 @@ function logPerSetExercise(exId, sets) {
     const avgReps = allReps.length ? Math.round(allReps.reduce((a,b) => a+b, 0) / allReps.length) : 0;
     ex.reps = avgReps;
     if (ex.type === 'banded') ex.bandLevel = bandLevel;
-    logEntry = { done: true, reps: avgReps, repsL, repsR, holdSec: 0, weight: 0, bandLevel };
+    logEntry = { done: true, reps: avgReps, repsL, repsR, holdSec: 0, weight, bandLevel };
   } else {
     const repsPerSet = [];
     for (let i = 0; i < sets; i++) {
@@ -1593,7 +1691,7 @@ function logPerSetExercise(exId, sets) {
     const avgReps = repsPerSet.length ? Math.round(repsPerSet.reduce((a,b) => a+b, 0) / repsPerSet.length) : 0;
     ex.reps = avgReps;
     if (ex.type === 'banded') ex.bandLevel = bandLevel;
-    logEntry = { done: true, reps: avgReps, repsPerSet, holdSec: 0, weight: 0, bandLevel };
+    logEntry = { done: true, reps: avgReps, repsPerSet, holdSec: 0, weight, bandLevel };
   }
 
   state.log[currentViewDate][exId] = logEntry;
@@ -1614,7 +1712,7 @@ function logGymExercise(exId, sets) {
   if (!ex) return;
   if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
 
-  const weight = parseInt(document.getElementById(`gym-weight-${exId}`)?.value) || 0;
+  const weight = parseFloat(document.getElementById(`gym-weight-${exId}`)?.value) || 0;
   const repsPerSet = [];
   for (let i = 0; i < sets; i++) {
     repsPerSet.push(parseInt(document.getElementById(`gym-reps-${exId}-${i}`)?.value) || 0);
@@ -1652,6 +1750,23 @@ function toggleDone(exId) {
       holdSec: ex.holdSec,
       bandLevel: ex.bandLevel
     };
+  }
+  save();
+  renderToday();
+}
+
+function skipExercise(exId) {
+  if (!state.log[currentViewDate]) state.log[currentViewDate] = {};
+  state.log[currentViewDate][exId] = { skipped: true };
+  save();
+  renderToday();
+}
+
+function unskipAll() {
+  const dayLog = state.log[currentViewDate];
+  if (!dayLog) return;
+  for (const [exId, entry] of Object.entries(dayLog)) {
+    if (entry.skipped) delete dayLog[exId];
   }
   save();
   renderToday();
@@ -1700,7 +1815,7 @@ function openLogEntryModal(exId) {
   } else if (ex.type === 'weighted') {
     html = `<div class="form-row">
       <div class="form-group"><label>Weight (lbs)</label>
-        <input type="number" id="logWeight" value="${entry?.weight ?? ex.weight}"></div>
+        <input type="number" id="logWeight" value="${entry?.weight ?? ex.weight}" step="0.5"></div>
       <div class="form-group"><label>Reps</label>
         <input type="number" id="logReps" value="${entry?.reps ?? ex.reps}"></div>
     </div>`;
@@ -1752,7 +1867,7 @@ function saveLogEntry() {
 
   const reps = parseInt(document.getElementById('logReps')?.value) || 0;
   const holdSec = parseInt(document.getElementById('logHoldSec')?.value) || 0;
-  const weight = parseInt(document.getElementById('logWeight')?.value) || 0;
+  const weight = parseFloat(document.getElementById('logWeight')?.value) || 0;
   const bandLevel = parseInt(document.getElementById('logBandLevel')?.value) || 0;
 
   // Update exercise's current numbers
@@ -1809,9 +1924,9 @@ function saveProtein() {
 function calcStreak() {
   let streak = 0;
   const d = new Date();
+  const exercises = state.exercises;
   for (let i = 0; i < 365; i++) {
-    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    const exercises = getExercisesForDate(ds);
+    const ds = fmtDateStr(d);
     const dayLog = state.log[ds] || {};
     const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
     if (exercises.length > 0 && doneCount === exercises.length) {
@@ -1829,18 +1944,31 @@ function calcStreak() {
 
 // ─── Exercises View ─────────────────────────────────────────────────────
 function renderExercises() {
-  renderExerciseList('daily', 'dailyExercisesList');
-  renderExerciseList('gym', 'gymExercisesList');
-}
-
-function renderExerciseList(category, containerId) {
-  const exercises = state.exercises.filter(e => e.category === category);
-  if (!exercises.length) {
-    document.getElementById(containerId).innerHTML = '<div class="empty-state">No exercises yet</div>';
-    return;
-  }
+  const highPriority = state.exercises.filter(e => e.priority === 'high');
+  const lowPriority = state.exercises.filter(e => e.priority === 'low');
 
   let html = '';
+
+  if (highPriority.length) {
+    html += '<div class="section-title">High Priority</div>';
+    html += '<div class="section-subtitle">Target 3 &ndash; 4 times per week</div>';
+    html += renderExerciseGroup(highPriority);
+  }
+
+  if (lowPriority.length) {
+    html += '<div class="section-title">Low Priority</div>';
+    html += '<div class="section-subtitle">Target 3 &ndash; 4 times per week</div>';
+    html += renderExerciseGroup(lowPriority);
+  }
+
+  if (!html) {
+    html = '<div class="empty-state">No exercises yet</div>';
+  }
+
+  document.getElementById('exercisesList').innerHTML = html;
+}
+
+function renderExerciseGroup(exercises) {
   const groups = {};
   exercises.forEach(e => {
     const g = e.group || 'General';
@@ -1848,6 +1976,7 @@ function renderExerciseList(category, containerId) {
     groups[g].push(e);
   });
 
+  let html = '';
   for (const [groupName, exs] of Object.entries(groups)) {
     html += `<div class="subsection-title">${groupName}</div>`;
     exs.forEach(ex => {
@@ -1867,13 +1996,14 @@ function renderExerciseList(category, containerId) {
         </div>`;
     });
   }
-  document.getElementById(containerId).innerHTML = html;
+  return html;
 }
 
 // ─── Add/Edit Modal ─────────────────────────────────────────────────────
-function openAddModal(category) {
+function openAddModal() {
   document.getElementById('modalTitle').textContent = 'Add Exercise';
   document.getElementById('exName').value = '';
+  document.getElementById('exPriority').value = 'high';
   document.getElementById('exType').value = 'reps';
   document.getElementById('exSets').value = '3';
   document.getElementById('exEachSide').checked = false;
@@ -1892,7 +2022,6 @@ function openAddModal(category) {
   document.getElementById('exBandedReps').value = '';
   document.getElementById('exBandedBenchReps').value = '';
   document.getElementById('exNotes').value = '';
-  document.getElementById('exCategory').value = category;
   document.getElementById('exEditId').value = '';
   document.getElementById('deleteBtn').style.display = 'none';
   toggleTypeFields();
@@ -1904,10 +2033,10 @@ function openEditModal(id) {
   if (!ex) return;
   document.getElementById('modalTitle').textContent = 'Edit Exercise';
   document.getElementById('exName').value = ex.name;
+  document.getElementById('exPriority').value = ex.priority || 'high';
   document.getElementById('exType').value = ex.type;
   document.getElementById('exSets').value = ex.sets || 3;
   document.getElementById('exEachSide').checked = ex.eachSide || false;
-  document.getElementById('exCategory').value = ex.category;
   document.getElementById('exEditId').value = ex.id;
   document.getElementById('exNotes').value = ex.notes || '';
   document.getElementById('deleteBtn').style.display = 'block';
@@ -1951,7 +2080,7 @@ function saveExercise() {
   if (!name) return;
 
   const type = document.getElementById('exType').value;
-  const category = document.getElementById('exCategory').value;
+  const priority = document.getElementById('exPriority').value;
   const editId = document.getElementById('exEditId').value;
   const sets = parseInt(document.getElementById('exSets').value) || 3;
   const eachSide = document.getElementById('exEachSide').checked;
@@ -1968,9 +2097,9 @@ function saveExercise() {
     holdSec = parseInt(document.getElementById('exHoldSec').value) || 0;
     benchHoldSec = parseInt(document.getElementById('exBenchHoldSec').value) || 0;
   } else if (type === 'weighted') {
-    weight = parseInt(document.getElementById('exWeight').value) || 0;
+    weight = parseFloat(document.getElementById('exWeight').value) || 0;
     reps = parseInt(document.getElementById('exWeightedReps').value) || 0;
-    benchWeight = parseInt(document.getElementById('exBenchWeight').value) || 0;
+    benchWeight = parseFloat(document.getElementById('exBenchWeight').value) || 0;
     benchReps = parseInt(document.getElementById('exWeightedBenchReps').value) || 0;
   } else if (type === 'banded') {
     bandLevel = parseInt(document.getElementById('exBandLevel').value) || 1;
@@ -1979,7 +2108,7 @@ function saveExercise() {
     benchReps = parseInt(document.getElementById('exBandedBenchReps').value) || 0;
   }
 
-  const data = { name, category, type, sets, reps, benchReps, holdSec, benchHoldSec, weight, benchWeight, bandLevel, benchBandLevel, eachSide, notes, group: 'General' };
+  const data = { name, priority, type, sets, reps, benchReps, holdSec, benchHoldSec, weight, benchWeight, bandLevel, benchBandLevel, eachSide, notes, group: 'General' };
 
   if (editId) {
     const ex = state.exercises.find(e => e.id === editId);
@@ -2011,11 +2140,11 @@ function deleteExercise() {
 // ─── Log View ───────────────────────────────────────────────────────────
 function renderLog() {
   let streakHtml = '';
+  const exercises = state.exercises;
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    const exercises = getExercisesForDate(ds);
+    const ds = fmtDateStr(d);
     const dayLog = state.log[ds] || {};
     const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
     const isTodayClass = ds === todayStr() ? ' today' : '';
