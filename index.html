@@ -660,6 +660,185 @@
 
   .skipped-summary button:hover { color: #9a9fff; }
 
+  /* Exercise Detail View */
+  .back-btn {
+    background: none;
+    border: none;
+    color: #7c83ff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .back-btn:hover { color: #9a9fff; }
+
+  .detail-header {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a2a3e;
+  }
+
+  .detail-header .exercise-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .detail-header .detail-group {
+    font-size: 12px;
+    color: #7c83ff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .detail-chart {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a2a3e;
+  }
+
+  .detail-chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .detail-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 120px;
+    padding-bottom: 20px;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  .detail-chart-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 20px;
+    max-width: 36px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .detail-chart-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    min-height: 4px;
+    position: relative;
+  }
+
+  .detail-chart-bar-label {
+    font-size: 9px;
+    color: #888;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  .detail-chart-date {
+    font-size: 8px;
+    color: #555;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+
+  .detail-chart-empty {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 20px 0;
+  }
+
+  .detail-history {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #2a2a3e;
+  }
+
+  .detail-history-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .detail-history-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #2a2a3e;
+    font-size: 13px;
+  }
+
+  .detail-history-entry:last-child { border-bottom: none; }
+
+  .detail-history-date {
+    color: #aaa;
+    min-width: 100px;
+  }
+
+  .detail-history-value {
+    color: #ccc;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .detail-history-empty {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 12px 0;
+  }
+
+  .exercise-name-link {
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .exercise-name-link:hover { color: #7c83ff; }
+
+  .exercise-last {
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  .day-type-badge {
+    display: inline-block;
+    background: #2a2a3e;
+    color: #7c83ff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid #3a3a5e;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-family: inherit;
+  }
+  .day-type-badge:hover { background: #3a3a5e; }
+
 </style>
 </head>
 <body>
@@ -722,6 +901,12 @@
     <div class="section-title">Last 14 Days</div>
     <div class="streak-bar" id="streakBar"></div>
     <div id="logList"></div>
+  </div>
+
+  <!-- EXERCISE DETAIL VIEW -->
+  <div class="view" id="view-exercise-detail">
+    <button class="back-btn" onclick="showView('today')">&larr; Back to Today</button>
+    <div id="exerciseDetailContent"></div>
   </div>
 </div>
 
@@ -893,6 +1078,22 @@ const PER_SET_EXERCISES = [
   'Single Leg Glute Bridge', 'Calf Raise', 'Single Arm Bent Over Row',
   'Straight Leg Raise', 'Standing Knee Raises', 'Side Lying Hip Abduction (Band)'
 ];
+// Which exercises appear on which day type ('both', 'a', or 'b')
+const AB_DAY_MAP = {
+  // Both days
+  'Straight Leg Raise': 'both', 'Supine 90-90 Alternating Heel Touches (PPT)': 'both',
+  'Side Lying Hip Abduction (Band)': 'both', 'Pallof Press': 'both',
+  'Hollow Body Hold': 'both', 'Supine Chin Tuck & Hold': 'both',
+  'Supine Chin Tuck Head Lift': 'both', 'Prone Chin Tuck': 'both',
+  // A days (legs + Dead Bug)
+  'Dead Bug': 'a', 'Standing Knee Raises': 'a', 'Leg Press': 'a',
+  'Knee Extension': 'a', 'Hamstring Curl': 'a', 'Hip Extension Machine': 'a',
+  'Calf Raise': 'a', 'Single Leg Glute Bridge': 'a',
+  // B days (upper body) — b1/b2 alternate which row exercise appears
+  'Standing Trap Shrug': 'b', 'Single Arm Bent Over Row': 'b1',
+  'Bent Over Reverse Fly': 'b', 'Dumbbell Bench Press': 'b', 'Seated Row': 'b2',
+  'Prone I Raises': 'b', 'Prone Y Raises': 'b', 'Prone T Raises': 'b',
+};
 
 let state = loadState();
 let currentViewDate = todayStr();
@@ -923,6 +1124,10 @@ function loadState() {
 
 function migrateState(s) {
   if (s.exercises) {
+    // Remove exercises by name
+    s.exercises = s.exercises.filter(e =>
+      e.name !== 'Goblet Squat' && e.name !== 'Kettlebell Deadlift'
+    );
     s.exercises.forEach(e => {
       if (!e.priority) {
         e.priority = LOW_PRIORITY_GROUPS.includes(e.group) ? 'low' : 'high';
@@ -930,20 +1135,38 @@ function migrateState(s) {
       if (PER_SET_EXERCISES.includes(e.name) && !e.perSet) {
         e.perSet = true;
       }
+      if (e.name === 'Bird Dog') e.priority = 'low';
+      // Always re-apply from AB_DAY_MAP for known exercises (handles b→b1/b2 updates)
+      if (Object.prototype.hasOwnProperty.call(AB_DAY_MAP, e.name)) {
+        e.abDay = AB_DAY_MAP[e.name];
+      } else if (!e.abDay) {
+        e.abDay = 'both';
+      }
       delete e.category;
     });
   }
+  if (!s.vitamind) s.vitamind = {};
+  if (!s.abDayRef) s.abDayRef = { date: '2026-04-22', type: 'b' };
+  if (!s.abDayOverrides) s.abDayOverrides = {};
+  // b1 = Single Arm Row day, b2 = Seated Row day; today (Apr 22) was Single Arm Row → b1
+  if (!s.bSubRef) s.bSubRef = { date: '2026-04-22', subtype: 'b1' };
   delete s.gymDays;
   delete s.gymDayDates;
   return s;
 }
 
 function defaultState() {
-  return {
+  const s = {
     exercises: getDefaultExercises(),
     log: {},
-    protein: {}
+    protein: {},
+    vitamind: {},
+    abDayRef: { date: '2026-04-22', type: 'b' },
+    abDayOverrides: {},
+    bSubRef: { date: '2026-04-22', subtype: 'b1' }
   };
+  migrateState(s); // ensure abDay and other fields are set on default exercises
+  return s;
 }
 
 function save() {
@@ -987,11 +1210,18 @@ function startFirebase(config) {
         const merged = { ...state };
         if (remote.log) {
           if (!merged.log) merged.log = {};
-          for (const [day, entries] of Object.entries(remote.log)) {
+          for (const [day, remoteDay] of Object.entries(remote.log)) {
             if (!merged.log[day]) {
-              merged.log[day] = entries;
+              merged.log[day] = remoteDay;
             } else {
-              merged.log[day] = { ...merged.log[day], ...entries };
+              for (const [exId, remoteEntry] of Object.entries(remoteDay)) {
+                if (!merged.log[day][exId]) {
+                  merged.log[day][exId] = remoteEntry;
+                } else {
+                  // Deep merge: preserve local fields (like repsL/repsR) that remote may lack
+                  merged.log[day][exId] = { ...merged.log[day][exId], ...remoteEntry };
+                }
+              }
             }
           }
         }
@@ -1028,6 +1258,10 @@ function syncToFirebase() {
 }
 
 function renderCurrentView() {
+  if (currentDetailExId && document.getElementById('view-exercise-detail').classList.contains('active')) {
+    renderExerciseDetail();
+    return;
+  }
   const active = document.querySelector('nav button.active');
   if (!active) return;
   const idx = Array.from(document.querySelectorAll('nav button')).indexOf(active);
@@ -1093,7 +1327,7 @@ function getDefaultExercises() {
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Opposite arm + leg; keep low back pressed to floor' },
 
-    { id: genId(), name: 'Bird Dog', priority: 'high', group: 'Transverse Abdominis',
+    { id: genId(), name: 'Bird Dog', priority: 'low', group: 'Transverse Abdominis',
       type: 'reps', sets: 3, reps: 12, benchReps: 12, eachSide: true,
       weight: 0, benchWeight: 0, holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
       notes: 'Opposite arm + leg; keep hips level' },
@@ -1183,16 +1417,6 @@ function getDefaultExercises() {
       notes: 'Light weights; arms straight out to sides' },
 
     // ── Lower Body (high priority) ──
-    { id: genId(), name: 'Goblet Squat', priority: 'high', group: 'Lower Body',
-      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 15, benchWeight: 25, eachSide: false,
-      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
-      notes: '' },
-
-    { id: genId(), name: 'Kettlebell Deadlift', priority: 'high', group: 'Lower Body',
-      type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 20, benchWeight: 35, eachSide: false,
-      holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
-      notes: '' },
-
     { id: genId(), name: 'Leg Press', priority: 'high', group: 'Lower Body',
       type: 'weighted', sets: 3, reps: 8, benchReps: 12, weight: 50, benchWeight: 90, eachSide: false,
       holdSec: 0, benchHoldSec: 0, bandLevel: 0, benchBandLevel: 0,
@@ -1325,6 +1549,46 @@ function fmtCurrent(ex, entry) {
   return '—';
 }
 
+// ─── Last completion helpers ─────────────────────────────────────────────
+function getLastCompletion(exId) {
+  const dates = Object.keys(state.log)
+    .filter(d => d < currentViewDate && state.log[d]?.[exId]?.done)
+    .sort().reverse();
+  if (!dates.length) return null;
+  return { date: dates[0], entry: state.log[dates[0]][exId] };
+}
+
+function fmtLastValue(ex, entry) {
+  if (ex.type === 'done') return '✓';
+  if (ex.type === 'timed') {
+    const r = entry.reps || 0, h = entry.holdSec || 0;
+    return r === 1 ? `${h}s hold` : `${r}×${h}s`;
+  }
+  if (ex.type === 'weighted') {
+    const rps = toArray(entry.repsPerSet);
+    const rStr = rps && rps.length ? rps.join('/') : (entry.reps || 0);
+    return `${entry.weight || 0} lbs × ${rStr}`;
+  }
+  if (ex.type === 'banded') {
+    const rps = toArray(entry.repsPerSet);
+    const rStr = rps && rps.length ? rps.join('/') : (entry.reps || 0);
+    return `${BAND_NAMES[entry.bandLevel] || '?'} × ${rStr}`;
+  }
+  const rL = toArray(entry.repsL), rR = toArray(entry.repsR);
+  if (rL && rR && rL.length && rR.length) return `L:${rL.join('/')} R:${rR.join('/')}`;
+  const rps = toArray(entry.repsPerSet);
+  if (rps && rps.length) return rps.join('/') + ' reps';
+  return `${entry.reps || 0} reps`;
+}
+
+function lastCompletionHtml(ex) {
+  const last = getLastCompletion(ex.id);
+  if (!last) return '';
+  const d = new Date(last.date + 'T12:00:00');
+  const dl = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `<div class="exercise-last">${dl}: ${fmtLastValue(ex, last.entry)}</div>`;
+}
+
 // ─── Weekly completion tracking ─────────────────────────────────────────
 function weeklyCompletionCount(exId, dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -1357,6 +1621,58 @@ function showView(name) {
   if (name === 'today') renderToday();
   if (name === 'exercises') renderExercises();
   if (name === 'log') renderLog();
+  if (name === 'exercise-detail') renderExerciseDetail();
+}
+
+let currentDetailExId = null;
+
+function showExerciseDetail(exId) {
+  currentDetailExId = exId;
+  showView('exercise-detail');
+}
+
+// ─── A/B Day Logic ──────────────────────────────────────────────────────
+function getDayType(dateStr) {
+  if (state.abDayOverrides?.[dateStr]) return state.abDayOverrides[dateStr];
+  const ref = state.abDayRef || { date: '2026-04-22', type: 'b' };
+  const diff = Math.round(
+    (new Date(dateStr + 'T12:00:00') - new Date(ref.date + 'T12:00:00')) / 86400000
+  );
+  const dateIsRef = (diff % 2 === 0);
+  return (dateIsRef === (ref.type === 'b')) ? 'b' : 'a';
+}
+
+function toggleDayType() {
+  if (!state.abDayOverrides) state.abDayOverrides = {};
+  const current = getDayType(currentViewDate);
+  state.abDayOverrides[currentViewDate] = current === 'a' ? 'b' : 'a';
+  save();
+  renderToday();
+}
+
+function getBSubtype(dateStr) {
+  // Returns 'b1' or 'b2' for B days, based on which B-day sub-cycle this is
+  const ref = state.bSubRef || { date: '2026-04-22', subtype: 'b1' };
+  const diffDays = Math.round(
+    (new Date(dateStr + 'T12:00:00') - new Date(ref.date + 'T12:00:00')) / 86400000
+  );
+  // ref is a B day, so B days occur every 2 days; diffDays/2 = how many B days from ref
+  const bIndex = diffDays / 2;
+  return (Math.abs(bIndex) % 2 === 0) ? ref.subtype : (ref.subtype === 'b1' ? 'b2' : 'b1');
+}
+
+function dayExercises(dateStr) {
+  const dayType = getDayType(dateStr);
+  const bSub = dayType === 'b' ? getBSubtype(dateStr) : null;
+  return state.exercises.filter(e => {
+    const ab = e.abDay;
+    if (!ab || ab === 'both') return true;
+    if (ab === 'a') return dayType === 'a';
+    if (ab === 'b') return dayType === 'b';
+    if (ab === 'b1') return bSub === 'b1';
+    if (ab === 'b2') return bSub === 'b2';
+    return true;
+  });
 }
 
 // ─── Today View ─────────────────────────────────────────────────────────
@@ -1398,11 +1714,14 @@ function renderToday() {
   const opts = { weekday: 'long', month: 'long', day: 'numeric' };
   const label = dateObj.toLocaleDateString('en-US', opts);
   const isToday = currentViewDate === todayStr();
-  document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '');
+  const dayType = getDayType(currentViewDate);
+  const badge = `<button class="day-type-badge" onclick="toggleDayType()" title="Click to switch A/B day">Day ${dayType.toUpperCase()}</button>`;
+  document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '') + ' ' + badge;
 
   const dayLog = state.log[currentViewDate] || {};
-  const active = state.exercises.filter(e => !dayLog[e.id]?.skipped);
-  const skippedCount = state.exercises.length - active.length;
+  const todayEx = dayExercises(currentViewDate);
+  const active = todayEx.filter(e => !dayLog[e.id]?.skipped);
+  const skippedCount = todayEx.length - active.length;
   const doneCount = active.filter(e => dayLog[e.id]?.done).length;
 
   document.getElementById('statDone').textContent = doneCount;
@@ -1462,6 +1781,8 @@ function renderTodayCard(ex, dayLog) {
   const benchStr = fmtBenchmark(ex);
   const prescStr = fmtPrescription(ex);
   const notesStr = ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : '';
+  const sparkline = renderMiniSparkline(ex);
+  const lastHtml = lastCompletionHtml(ex);
 
   const editAttrs = canEdit ? `style="cursor:pointer" onclick="openLogEntryModal('${ex.id}')"` : '';
 
@@ -1470,11 +1791,13 @@ function renderTodayCard(ex, dayLog) {
       <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
       <button class="exercise-check ${doneClass}" onclick="toggleDone('${ex.id}')">&#10003;</button>
       <div class="exercise-info">
-        <div class="exercise-name">${ex.name} ${badge}</div>
+        <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span> ${badge}</div>
         <div class="exercise-prescription">${prescStr}</div>
         <div class="exercise-benchmark">${benchStr}</div>
         ${notesStr}
+        ${lastHtml}
       </div>
+      ${sparkline}
       <div class="exercise-current" ${editAttrs}>
         <div class="exercise-current-value">${currentStr}</div>
         ${canEdit ? '<div class="exercise-current-label">tap to edit</div>' : ''}
@@ -1496,15 +1819,19 @@ function renderWeightedCard(ex, entry, ratio, color, badge) {
 
   if (done) {
     const repsStr = existingReps.length ? existingReps.join(' / ') : `${entry?.reps ?? ex.reps} reps`;
+    const sparkline = renderMiniSparkline(ex);
+    const lastHtml = lastCompletionHtml(ex);
     return `
       <div class="gym-inline-card checked">
         <div class="gym-inline-header">
           <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
           <div class="exercise-info">
-            <div class="exercise-name">${ex.name} ${badge}</div>
+            <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span> ${badge}</div>
             <div class="exercise-benchmark">${benchStr}</div>
             ${notesStr}
+            ${lastHtml}
           </div>
+          ${sparkline}
         </div>
         <div class="gym-logged-summary">
           <strong>${entry.weight} lbs</strong> &mdash; ${repsStr} reps${side}
@@ -1523,15 +1850,19 @@ function renderWeightedCard(ex, entry, ratio, color, badge) {
       </div>`;
   }
 
+  const sparklineW = renderMiniSparkline(ex);
+  const lastHtmlW = lastCompletionHtml(ex);
   return `
     <div class="gym-inline-card">
       <div class="gym-inline-header">
         <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
         <div class="exercise-info">
-          <div class="exercise-name">${ex.name}${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
+          <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span>${side ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
           <div class="exercise-benchmark">${benchStr}</div>
           ${notesStr}
+          ${lastHtmlW}
         </div>
+        ${sparklineW}
         <button class="skip-btn" onclick="skipExercise('${ex.id}')" title="Skip today">&#10005;</button>
       </div>
       <div class="gym-inline-inputs">
@@ -1561,22 +1892,29 @@ function renderPerSetCard(ex, entry, ratio, color, badge) {
     const bandStr = isBanded ? `${BAND_NAMES[entry.bandLevel] || 'None'} — ` : '';
     const weightStr = isWeighted ? `<strong>${entry.weight} lbs</strong> &mdash; ` : '';
     let repsDisplay = '';
-    if (hasSides && entry?.repsL && entry?.repsR) {
-      repsDisplay = `L: ${entry.repsL.join(' / ')} &nbsp; R: ${entry.repsR.join(' / ')}`;
-    } else if (entry?.repsPerSet?.length) {
-      repsDisplay = entry.repsPerSet.join(' / ') + ' reps';
+    const rL = toArray(entry?.repsL);
+    const rR = toArray(entry?.repsR);
+    const rps = toArray(entry?.repsPerSet);
+    if (hasSides && rL && rR) {
+      repsDisplay = `L: ${rL.join(' / ')} &nbsp; R: ${rR.join(' / ')}`;
+    } else if (rps && rps.length) {
+      repsDisplay = rps.join(' / ') + ' reps';
     } else {
       repsDisplay = `${entry?.reps ?? ex.reps} reps`;
     }
+    const sparklinePS = renderMiniSparkline(ex);
+    const lastHtmlPS = lastCompletionHtml(ex);
     return `
       <div class="gym-inline-card checked">
         <div class="gym-inline-header">
           <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
           <div class="exercise-info">
-            <div class="exercise-name">${ex.name} ${badge}</div>
+            <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span> ${badge}</div>
             <div class="exercise-benchmark">${benchStr}</div>
             ${notesStr}
+            ${lastHtmlPS}
           </div>
+          ${sparklinePS}
         </div>
         <div class="gym-logged-summary">
           ${weightStr}<strong>${bandStr}${repsDisplay}</strong>
@@ -1641,15 +1979,19 @@ function renderPerSetCard(ex, entry, ratio, color, badge) {
     }
   }
 
+  const sparklinePS2 = renderMiniSparkline(ex);
+  const lastHtmlPS2 = lastCompletionHtml(ex);
   return `
     <div class="gym-inline-card">
       <div class="gym-inline-header">
         <div class="color-indicator" style="background:${color}" title="${Math.round(ratio*100)}% of benchmark"></div>
         <div class="exercise-info">
-          <div class="exercise-name">${ex.name}${hasSides ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
+          <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span>${hasSides ? ' <span style="font-size:11px;color:#888">(each side)</span>' : ''} ${badge}</div>
           <div class="exercise-benchmark">${benchStr}</div>
           ${notesStr}
+          ${lastHtmlPS2}
         </div>
+        ${sparklinePS2}
         <button class="skip-btn" onclick="skipExercise('${ex.id}')" title="Skip today">&#10005;</button>
       </div>
       ${weightInput ? `<div class="gym-inline-inputs" style="margin-bottom:6px">${weightInput}</div>` : ''}
@@ -1920,16 +2262,17 @@ function saveProtein() {
   if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
 }
 
+
 // ─── Streak ─────────────────────────────────────────────────────────────
 function calcStreak() {
   let streak = 0;
   const d = new Date();
-  const exercises = state.exercises;
   for (let i = 0; i < 365; i++) {
     const ds = fmtDateStr(d);
     const dayLog = state.log[ds] || {};
-    const doneCount = exercises.filter(e => dayLog[e.id]?.done).length;
-    if (exercises.length > 0 && doneCount === exercises.length) {
+    const exs = dayExercises(ds);
+    const doneCount = exs.filter(e => dayLog[e.id]?.done).length;
+    if (exs.length > 0 && doneCount === exs.length) {
       streak++;
     } else if (i > 0) {
       break;
@@ -1987,7 +2330,7 @@ function renderExerciseGroup(exercises) {
         <div class="exercise-card">
           <div class="color-indicator" style="background:${color}"></div>
           <div class="exercise-info">
-            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-name"><span class="exercise-name-link" onclick="showExerciseDetail('${ex.id}')">${ex.name}</span></div>
             <div class="exercise-details">${fmtPrescription(ex)}</div>
             <div class="exercise-benchmark">${fmtBenchmark(ex)}</div>
             ${ex.notes ? `<div class="exercise-notes">${ex.notes}</div>` : ''}
@@ -2178,15 +2521,13 @@ function renderLog() {
       const color = ratioToColor(ratio);
       let detail = '';
       if (ex.type === 'reps') {
-        detail = entry.repsPerSet ? ` — ${entry.repsPerSet.join(' / ')} reps` : ` — ${entry.reps} reps`;
+        detail = ` — ${fmtRepsDetail(entry)}`;
       } else if (ex.type === 'timed') detail = ` — ${entry.reps} &times; ${entry.holdSec}s`;
       else if (ex.type === 'weighted') {
-        const repsStr = entry.repsPerSet ? entry.repsPerSet.join(' / ') : entry.reps;
-        detail = ` — ${entry.weight} lbs &times; ${repsStr}`;
+        detail = ` — ${entry.weight} lbs &times; ${fmtRepsDetail(entry)}`;
       }
       else if (ex.type === 'banded') {
-        const repsStr = entry.repsPerSet ? entry.repsPerSet.join(' / ') : entry.reps;
-        detail = ` — ${BAND_NAMES[entry.bandLevel] || '?'} &times; ${repsStr}`;
+        detail = ` — ${BAND_NAMES[entry.bandLevel] || '?'} &times; ${fmtRepsDetail(entry)}`;
       }
 
       logHtml += `<div class="log-entry"><div class="color-indicator" style="background:${color}"></div><span class="log-check">&#10003;</span> ${ex.name}${detail}</div>`;
@@ -2200,6 +2541,311 @@ function renderLog() {
     logHtml += '</div>';
   });
   document.getElementById('logList').innerHTML = logHtml;
+}
+
+// ─── Exercise Detail View ────────────────────────────────────────────
+function renderExerciseDetail() {
+  const ex = state.exercises.find(e => e.id === currentDetailExId);
+  if (!ex) {
+    document.getElementById('exerciseDetailContent').innerHTML = '<div class="empty-state">Exercise not found</div>';
+    return;
+  }
+
+  // Gather history entries
+  const history = [];
+  for (const [dateStr, dayLog] of Object.entries(state.log)) {
+    const entry = dayLog[ex.id];
+    if (entry?.done) {
+      history.push({ date: dateStr, entry });
+    }
+  }
+  history.sort((a, b) => b.date.localeCompare(a.date));
+
+  const ratio = getProgressRatio(ex);
+  const color = ratioToColor(ratio);
+
+  // Header
+  let html = `
+    <div class="detail-header">
+      <div class="detail-group">${ex.group || 'General'}</div>
+      <div class="exercise-name">${ex.name}</div>
+      <div class="exercise-prescription">${fmtPrescription(ex)}</div>
+      <div class="exercise-benchmark">${fmtBenchmark(ex)}</div>
+      ${ex.notes ? `<div class="exercise-notes" style="margin-top:6px">${ex.notes}</div>` : ''}
+      <div style="margin-top:8px">
+        <div class="color-indicator" style="background:${color};display:inline-block"></div>
+        <span style="font-size:12px;color:#888;margin-left:6px">${Math.round(ratio*100)}% of benchmark</span>
+      </div>
+    </div>`;
+
+  // Chart
+  html += renderDetailChart(ex, history);
+
+  // History list
+  html += renderDetailHistory(ex, history);
+
+  document.getElementById('exerciseDetailContent').innerHTML = html;
+}
+
+function getEntryPrimaryValue(ex, entry) {
+  if (ex.type === 'weighted') return entry.weight || 0;
+  if (ex.type === 'reps') return entry.reps || 0;
+  if (ex.type === 'timed') return entry.holdSec || 0;
+  if (ex.type === 'banded') return entry.bandLevel || 0;
+  return 1; // done type
+}
+
+function getEntryVolumes(ex, entry) {
+  // Returns { total, L, R } — L/R are non-null only when per-side data exists
+  if (ex.type === 'done') return { total: 1, L: null, R: null };
+  if (ex.type === 'weighted') return { total: entry.weight || 0, L: null, R: null };
+  if (ex.type === 'timed') {
+    const total = (entry.reps || 0) * (entry.holdSec || 0);
+    return { total, L: null, R: null };
+  }
+  const rL = toArray(entry.repsL);
+  const rR = toArray(entry.repsR);
+  const rps = toArray(entry.repsPerSet);
+  if (ex.eachSide && rL && rR && rL.length && rR.length) {
+    const sumL = rL.reduce((a, b) => a + b, 0);
+    const sumR = rR.reduce((a, b) => a + b, 0);
+    return { total: sumL + sumR, L: sumL, R: sumR };
+  }
+  if (rps && rps.length) return { total: rps.reduce((a, b) => a + b, 0), L: null, R: null };
+  return { total: (entry.reps || 0) * (ex.sets || 3), L: null, R: null };
+}
+
+function renderDetailLineChart(ex, last30) {
+  const dataPoints = last30.map(h => ({ date: h.date, ...getEntryVolumes(ex, h.entry) }));
+  const hasLR = dataPoints.some(d => d.L !== null && d.R !== null);
+
+  const seriesA = dataPoints.map(d => hasLR ? (d.L !== null ? d.L : d.total / 2) : d.total);
+  const seriesB = hasLR ? dataPoints.map(d => d.R !== null ? d.R : d.total / 2) : null;
+
+  const allVals = [...seriesA, ...(seriesB || [])];
+  const maxVal = Math.max(...allVals, 1);
+
+  const svgW = 400, svgH = 120;
+  const padL = 30, padR = 8, padT = 10, padB = 24;
+  const chartW = svgW - padL - padR;
+  const chartH = svgH - padT - padB;
+  const n = last30.length;
+
+  const xPos = i => padL + (n <= 1 ? chartW / 2 : (i / (n - 1)) * chartW);
+  const yPos = v => padT + chartH - (v / maxVal) * chartH;
+
+  function makeLine(series, color) {
+    const pts = series.map((v, i) => `${xPos(i).toFixed(1)},${yPos(v).toFixed(1)}`).join(' ');
+    const dots = series.map((v, i) =>
+      `<circle cx="${xPos(i).toFixed(1)}" cy="${yPos(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#1a1a2e" stroke-width="1.5"/>`
+    ).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+  }
+
+  // Subtle horizontal grid lines
+  const grid = [0.25, 0.5, 0.75].map(f => {
+    const y = yPos(f * maxVal).toFixed(1);
+    return `<line x1="${padL}" y1="${y}" x2="${padL + chartW}" y2="${y}" stroke="#222236" stroke-width="1"/>`;
+  }).join('');
+
+  // Axes
+  const axes = `
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + chartH}" stroke="#333" stroke-width="1"/>
+    <line x1="${padL}" y1="${padT + chartH}" x2="${padL + chartW}" y2="${padT + chartH}" stroke="#333" stroke-width="1"/>`;
+
+  // Y axis labels
+  const yLabels = `
+    <text x="${padL - 4}" y="${padT + 4}" text-anchor="end" dominant-baseline="hanging" font-size="8" fill="#555">${maxVal}</text>
+    <text x="${padL - 4}" y="${padT + chartH}" text-anchor="end" font-size="8" fill="#555">0</text>`;
+
+  // X date labels: first, last, and up to 2 middle
+  const labelIdx = new Set([0, n - 1]);
+  if (n > 4) { const s = Math.floor(n / 3); for (let i = s; i < n - 1; i += s) labelIdx.add(i); }
+  const dateLabels = [...labelIdx].map(i => {
+    const d = new Date(last30[i].date + 'T12:00:00');
+    const lbl = (d.getMonth() + 1) + '/' + d.getDate();
+    return `<text x="${xPos(i).toFixed(1)}" y="${svgH - 3}" text-anchor="middle" font-size="8" fill="#555">${lbl}</text>`;
+  }).join('');
+
+  const svg = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;height:130px;display:block;overflow:visible">
+    ${grid}${axes}${yLabels}${dateLabels}
+    ${makeLine(seriesA, '#7c83ff')}
+    ${hasLR ? makeLine(seriesB, '#4caf50') : ''}
+  </svg>`;
+
+  const yLabel = ex.type === 'weighted' ? 'weight (lbs)' : ex.type === 'timed' ? 'total sec' : 'total reps';
+  const legend = hasLR ? `
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:#888">
+      <span style="display:flex;align-items:center;gap:5px">
+        <svg width="16" height="4" style="flex-shrink:0;overflow:visible"><line x1="0" y1="2" x2="16" y2="2" stroke="#7c83ff" stroke-width="2"/></svg>Left
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <svg width="16" height="4" style="flex-shrink:0;overflow:visible"><line x1="0" y1="2" x2="16" y2="2" stroke="#4caf50" stroke-width="2"/></svg>Right
+      </span>
+    </div>` : '';
+
+  return `
+    <div class="detail-chart">
+      <div class="detail-chart-title">Progress — ${yLabel} (last ${last30.length} sessions)</div>
+      ${svg}
+      ${legend}
+    </div>`;
+}
+
+function renderDetailChart(ex, history) {
+  const last30 = history.slice(0, 30).reverse(); // chronological order for chart
+
+  if (!last30.length) {
+    return `
+      <div class="detail-chart">
+        <div class="detail-chart-title">Progress</div>
+        <div class="detail-chart-empty">No completions yet</div>
+      </div>`;
+  }
+
+  return renderDetailLineChart(ex, last30);
+}
+
+function renderMiniSparkline(ex) {
+  const history = [];
+  for (const [dateStr, dayLog] of Object.entries(state.log)) {
+    const entry = dayLog[ex.id];
+    if (entry?.done) history.push({ date: dateStr, entry });
+  }
+  if (history.length < 2) return '';
+  history.sort((a, b) => a.date.localeCompare(b.date));
+  const last12 = history.slice(-12);
+
+  const dataPoints = last12.map(h => getEntryVolumes(ex, h.entry));
+  const hasLR = dataPoints.some(d => d.L !== null && d.R !== null);
+  const seriesA = dataPoints.map(d => hasLR ? (d.L !== null ? d.L : d.total / 2) : d.total);
+  const seriesB = hasLR ? dataPoints.map(d => d.R !== null ? d.R : d.total / 2) : null;
+
+  const allVals = [...seriesA, ...(seriesB || [])];
+  const maxVal = Math.max(...allVals, 1);
+  const minVal = Math.min(...allVals, 0);
+  const range = maxVal - minVal || 1;
+
+  const W = 64, H = 32, pad = 3;
+  const n = last12.length;
+  const xPos = i => pad + (n <= 1 ? (W - 2 * pad) / 2 : (i / (n - 1)) * (W - 2 * pad));
+  const yPos = v => H - pad - ((v - minVal) / range) * (H - 2 * pad);
+
+  function sparkLine(series, color) {
+    const pts = series.map((v, i) => `${xPos(i).toFixed(1)},${yPos(v).toFixed(1)}`).join(' ');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+
+  return `<svg width="${W}" height="${H}" style="display:block;flex-shrink:0;opacity:0.8;align-self:center">
+    ${sparkLine(seriesA, '#7c83ff')}
+    ${hasLR ? sparkLine(seriesB, '#4caf50') : ''}
+  </svg>`;
+}
+
+function getEntryRatio(ex, entry) {
+  if (ex.type === 'done') return 1;
+  if (ex.type === 'reps') {
+    if (ex.benchReps <= 0) return 1;
+    return Math.min((entry.reps || 0) / ex.benchReps, 1);
+  }
+  if (ex.type === 'timed') {
+    let rr = ex.benchReps > 0 ? Math.min((entry.reps || 0) / ex.benchReps, 1) : 1;
+    let hr = ex.benchHoldSec > 0 ? Math.min((entry.holdSec || 0) / ex.benchHoldSec, 1) : 1;
+    return (rr + hr) / 2;
+  }
+  if (ex.type === 'weighted') {
+    let wr = ex.benchWeight > 0 ? Math.min((entry.weight || 0) / ex.benchWeight, 1) : 1;
+    let rr = ex.benchReps > 0 ? Math.min((entry.reps || 0) / ex.benchReps, 1) : 1;
+    return (wr + rr) / 2;
+  }
+  if (ex.type === 'banded') {
+    let br = ex.benchBandLevel > 0 ? Math.min((entry.bandLevel || 0) / ex.benchBandLevel, 1) : 1;
+    let rr = ex.benchReps > 0 ? Math.min((entry.reps || 0) / ex.benchReps, 1) : 1;
+    return (br + rr) / 2;
+  }
+  return 1;
+}
+
+// Firebase RTDB can convert arrays to objects with numeric keys — normalize back
+function toArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object') return Object.values(val);
+  return null;
+}
+
+function fmtChartLabel(entry) {
+  const rL = toArray(entry.repsL);
+  const rR = toArray(entry.repsR);
+  if (rL && rR) return rL.join('/') + ' ' + rR.join('/');
+  const rps = toArray(entry.repsPerSet);
+  if (rps && rps.length) return rps.join('/');
+  return (entry.reps || 0) + 'r';
+}
+
+function fmtRepsDetail(entry) {
+  const rL = toArray(entry.repsL);
+  const rR = toArray(entry.repsR);
+  if (rL && rR) return 'L: ' + rL.join(' / ') + ' R: ' + rR.join(' / ') + ' reps';
+  const rps = toArray(entry.repsPerSet);
+  if (rps && rps.length) return rps.join(' / ') + ' reps';
+  return (entry.reps || 0) + ' reps';
+}
+
+function fmtHistoryEntry(ex, entry) {
+  if (ex.type === 'done') return 'Completed';
+
+  if (ex.type === 'weighted') {
+    return `${entry.weight || 0} lbs &times; ${fmtRepsDetail(entry)}`;
+  }
+
+  if (ex.type === 'reps') {
+    return fmtRepsDetail(entry);
+  }
+
+  if (ex.type === 'timed') {
+    const r = entry.reps || 0;
+    const h = entry.holdSec || 0;
+    if (r === 1) return h + 's hold';
+    return r + ' &times; ' + h + 's';
+  }
+
+  if (ex.type === 'banded') {
+    const bandName = BAND_NAMES[entry.bandLevel] || '?';
+    return bandName + ' &times; ' + fmtRepsDetail(entry);
+  }
+
+  return 'Completed';
+}
+
+function renderDetailHistory(ex, history) {
+  const last30 = history.slice(0, 30);
+
+  if (!last30.length) {
+    return `
+      <div class="detail-history">
+        <div class="detail-history-title">History</div>
+        <div class="detail-history-empty">No completions yet</div>
+      </div>`;
+  }
+
+  let entriesHtml = '';
+  last30.forEach(h => {
+    const dateObj = new Date(h.date + 'T12:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const valueStr = fmtHistoryEntry(ex, h.entry);
+
+    entriesHtml += `
+      <div class="detail-history-entry">
+        <div class="detail-history-date">${dateLabel}</div>
+        <div class="detail-history-value">${valueStr}</div>
+      </div>`;
+  });
+
+  return `
+    <div class="detail-history">
+      <div class="detail-history-title">History (last ${last30.length})</div>
+      ${entriesHtml}
+    </div>`;
 }
 
 // ─── Init ───────────────────────────────────────────────────────────────
