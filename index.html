@@ -1714,9 +1714,7 @@ function renderToday() {
   const opts = { weekday: 'long', month: 'long', day: 'numeric' };
   const label = dateObj.toLocaleDateString('en-US', opts);
   const isToday = currentViewDate === todayStr();
-  const dayType = getDayType(currentViewDate);
-  const badge = `<button class="day-type-badge" onclick="toggleDayType()" title="Click to switch A/B day">Day ${dayType.toUpperCase()}</button>`;
-  document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '') + ' ' + badge;
+  document.getElementById('currentDayLabel').innerHTML = label + (isToday ? ' <span style="color:#7c83ff">(Today)</span>' : '');
 
   const dayLog = state.log[currentViewDate] || {};
   const todayEx = dayExercises(currentViewDate);
